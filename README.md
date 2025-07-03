@@ -1,1 +1,77 @@
 # Blender-Shortcuts
+
+A simple and intuitive toolbar designed to help **Blender modellers of all skill levels** access common tools and shortcuts quickly and easily.
+
+## 🧰 Features
+
+- Clean, beginner-friendly UI panel inside Blender
+- Lists common keyboard, mouse, and numpad shortcuts
+- Designed for clarity and accessibility
+- Compatible with **Blender LTS versions only**
+- 100% **free and open source**, forever
+
+---
+
+## 📦 Installation
+
+### Step-by-step:
+
+1. Open **Blender**
+2. Go to:  
+   `Edit → Preferences → Add-ons`
+3. Click:  
+   `Install...`
+4. Select the downloaded `.zip` file
+5. Enable the add-on in the list
+
+---
+
+## 💬 Welcome Message from the Developer
+
+Welcome to Blender Shortcuts
+
+This tool was designed to help modellers of all age ranges see and access Blender’s common functions in an easy-to-use toolbar.
+Transparent and easily accessible even for Newbies, with standard terminology and accessibility to the most common keyboard, mouse, and numpad controls.
+
+Blender Shortcuts is free for life. If you'd like to support us so we can keep this addon up-to-date, please feel free to donate, sponsor, and help fund this addon.
+
+Blender Shortcuts will only be compatible with LTS versions.
+
+Enjoy using Blender with new eyes!
+
+## ❤️ Support Development
+
+This project is free to use and always will be. However, maintaining compatibility with future Blender LTS versions requires time and effort.
+
+If you find this useful and would like to support continued development:
+
+📧 Contact: [deaddogdown.gamestudio@gmail.com](mailto:deaddogdown.gamestudio@gmail.com)  
+💸 Funders welcome via email — any amount helps!
+
+## 📜 License
+
+This addon is licensed under the **GNU General Public License v2.0** — same as Blender itself.
+
+You are free to:
+- ✅ Use it
+- ✅ Study it
+- ✅ Modify it
+- ✅ Share it
+
+With the condition that:
+- 🔁 Any derivative work must also remain open source under the same license and give credit to "Dead Dog Down Game Studio".
+
+See the [LICENSE](LICENSE) file for full terms.
+
+## 🧑‍💻 Developed by
+
+**DEAD DOG DOWN - GAME STUDIO**
+
+We make tools and games — and love helping creators express themselves through open-source software.
+
+## ™ Disclaimer
+
+"Blender" is a registered trademark of the Blender Foundation.  
+This project is **not affiliated with**, endorsed by, or supported by the Blender Foundation or any of its subsidiaries.
+
+The use of the term “Blender” in this project’s name and description is for descriptive purposes only, to indicate compatibility with Blender software.
