@@ -10,6 +10,14 @@ A simple and intuitive toolbar designed to help **Blender modellers of all skill
 - Compatible with **Blender LTS versions only**
 - 100% **free and open source**, forever
 
+## 🖼️ Preview
+
+Here's a quick look at the Blender Shortcuts interface:
+
+![Main Window](screenshots/BlenderShortcutsMain.jpg)
+The toolbar you never knew you needed.
+![Main Panel](screenshots/BlenderShortcutsCloseup.jpg)
+
 ## 🖥️ Compatibility
 
 ✅ **Currently supports:**
