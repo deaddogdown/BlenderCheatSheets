@@ -95,3 +95,7 @@ We make tools and games — and love helping creators express themselves through
 This project is **not affiliated with**, endorsed by, or supported by the Blender Foundation or any of its subsidiaries.
 
 The use of the term “Blender” in this project’s name and description is for descriptive purposes only, to indicate compatibility with Blender software.
+
+---
+
+![Main Panel](screenshots/DDD-GameStudio.png)
