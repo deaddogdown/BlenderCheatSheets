@@ -32,8 +32,6 @@ Here's a quick look at the Blender Shortcuts interface:
 This add-on is designed to work with **Blender LTS (Long Term Support)** versions only, ensuring stability and long-term usability.
 It will probably work on your version of Blender that is a non-LTS, so give it a try.
 
-> ⚠️ Looking for support on non-LTS versions? Let us know via email or GitHub issues!
-
 ## 📦 Installation
 
 ### Step-by-step:
