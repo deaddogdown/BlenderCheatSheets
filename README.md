@@ -10,7 +10,17 @@ A simple and intuitive toolbar designed to help **Blender modellers of all skill
 - Compatible with **Blender LTS versions only**
 - 100% **free and open source**, forever
 
----
+## 🖥️ Compatibility
+
+✅ **Currently supports:**
+
+- [Blender 3.6 LTS](https://www.blender.org/download/releases/3-6/ )  
+- [Blender 4.2 LTS](https://www.blender.org/download/releases/4-2/ )
+
+This add-on is designed to work with **Blender LTS (Long Term Support)** versions only, ensuring stability and long-term usability.
+It will probably work on your version of Blender that is a non-LTS, so give it a try.
+
+> ⚠️ Looking for support on non-LTS versions? Let us know via email or GitHub issues!
 
 ## 📦 Installation
 
