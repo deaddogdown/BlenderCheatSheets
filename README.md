@@ -15,7 +15,11 @@ A simple and intuitive toolbar designed to help **Blender modellers of all skill
 Here's a quick look at the Blender Shortcuts interface:
 
 ![Main Window](screenshots/BlenderShortcutsMain.jpg)
-The toolbar you never knew you needed.
+
+
+## The toolbar you never knew you needed.
+
+
 ![Main Panel](screenshots/BlenderShortcutsCloseup.jpg)
 
 ## 🖥️ Compatibility
