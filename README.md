@@ -1,4 +1,4 @@
-# Blender-Shortcuts
+# Blender CheatSheets
 
 A simple and intuitive toolbar designed to help **Blender modellers of all skill levels** access common tools and shortcuts quickly and easily.
 
@@ -7,12 +7,12 @@ A simple and intuitive toolbar designed to help **Blender modellers of all skill
 - Clean, beginner-friendly UI panel inside Blender
 - Lists common keyboard, mouse, and numpad shortcuts
 - Designed for clarity and accessibility
-- Compatible with **Blender LTS versions only**
+- Compatible with **Blender LTS versions**
 - 100% **free and open source**, forever
 
 ## 🖼️ Preview
 
-Here's a quick look at the Blender Shortcuts interface:
+Here's a quick look at the Blender CheatSheets interface:
 
 ![Main Window](screenshots/BlenderShortcutsMain.jpg)
 
@@ -29,7 +29,7 @@ Here's a quick look at the Blender Shortcuts interface:
 - [Blender 3.6 LTS](https://www.blender.org/download/releases/3-6/ )  
 - [Blender 4.2 LTS](https://www.blender.org/download/releases/4-2/ )
 
-This add-on is designed to work with **Blender LTS (Long Term Support)** versions only, ensuring stability and long-term usability.
+This add-on is designed to work with **Blender LTS (Long Term Support)** versions, ensuring stability and long-term usability.
 It will probably work on your version of Blender that is a non-LTS, so give it a try.
 
 ## 📦 Installation
@@ -48,14 +48,14 @@ It will probably work on your version of Blender that is a non-LTS, so give it a
 
 ## 💬 Welcome Message from the Developer
 
-Welcome to Blender Shortcuts
+Welcome to Blender CheatSheets
 
 This tool was designed to help modellers of all age ranges see and access Blender’s common functions in an easy-to-use toolbar.
 Transparent and easily accessible even for Newbies, with standard terminology and accessibility to the most common keyboard, mouse, and numpad controls.
 
-Blender Shortcuts is free for life. If you'd like to support us so we can keep this addon up-to-date, please feel free to donate, sponsor, and help fund this addon.
+Blender CheatSheets is free for life. If you'd like to support us so we can keep this addon up-to-date, please feel free to donate, sponsor, and help fund this addon.
 
-Blender Shortcuts will only be compatible with LTS versions.
+Blender CheatSheets will only be compatible with LTS versions.
 
 Enjoy using Blender with new eyes!
 
