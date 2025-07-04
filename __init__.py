@@ -1,26 +1,26 @@
 bl_info = {
-    "name": "Blender Shortcuts",
-    "author": "Lee Franken",
+    "name": "CheatSheets",
+    "author": "Dead Dog Down - Game Studio",
     "version": (1, 0),
     "blender": (3, 6, 0),
-    "location": "3D View > N-Panel > Blender Shortcuts",
+    "location": "3D View > N-Panel > CheatSheets",
     "description": "Quick access to commonly used Blender shortcuts in collapsible sections.",
-    "category": "Interface"
+    "category": "Accessibility"
 }
 
 if "bpy" in locals():
     import importlib
-    importlib.reload(blenderShortcuts)
+    importlib.reload(blenderCheatSheets)
 else:
-    from . import blenderShortcuts
+    from . import blenderCheatSheets
 
 import bpy
 
 def register():
-    blenderShortcuts.register()
+    blenderCheatSheets.register()
 
 def unregister():
-    blenderShortcuts.unregister()
+    blenderCheatSheets.unregister()
 
 if __name__ == "__main__":
     register()
