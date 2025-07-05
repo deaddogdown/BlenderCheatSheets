@@ -5,13 +5,13 @@ def register_properties():
     props = [
         ('show_general', False),
         ('show_viewport', False),
+        ('show_transform', False),
         ('show_world_origin', False),
         ('show_object_origin', False),
         ('show_cursor', False),
-        ('show_transform', False),
-        ('show_camera', False),
         ('show_object_mode', False),
         ('show_edit_mode', False),
+        ('show_camera', False),        
         ('show_render', False),
         ('show_about', False)
     ]
@@ -26,13 +26,13 @@ def unregister_properties():
     props = [
         'show_general',
         'show_viewport',
+        'show_transform',
         'show_world_origin',
         'show_object_origin',
         'show_cursor',
-        'show_transform',
-        'show_camera',
         'show_object_mode',
         'show_edit_mode',
+        'show_camera',        
         'show_render',
         'show_about'
     ]
@@ -154,6 +154,57 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                 col.prop(context.preferences.inputs, "use_mouse_emulate_3_button", text="Emulate 3 Button Mouse")
             col.prop(context.preferences.view, "smooth_view", text="Smooth View Transitions")
 
+        # 🧩 Transform and Manipulation
+        box = layout.box()
+        row = box.row()
+        row.prop(scene, "show_transform", text="Transform and Manipulation", emboss=False, icon='ORIENTATION_GIMBAL')
+        if scene.show_transform:
+            col = box.column(align=True)
+            
+            # THE WHY - What is Transform?
+            col.label(text="Transform = Change Position, Rotation, Scale")
+            col.label(text="Works in: Object Mode & Edit Mode")
+            col.separator()
+            
+            # CORE TRANSFORMS (work everywhere)
+            col.label(text="Basic Transforms:")
+            row = col.row()
+            row.scale_y = 1.2
+            row.operator("transform.translate", text="Move (G)")
+            row.operator("transform.rotate", text="Rotate (R)")
+            row.operator("transform.resize", text="Scale (S)")
+            
+            # CONSTRAINT HELPERS
+            col.label(text="Axis Constraints (after G/R/S):")
+            col.label(text="• X-axis only: X • Y-axis only: Y • Z-axis only: Z")
+            col.label(text="• Local axes: XX, YY, ZZ")
+            col.separator()
+            
+            # EDIT MODE SPECIFIC
+            col.label(text="Edit Mode - Create New Geometry:")
+            col.operator("mesh.extrude_region_move", text="Extrude Faces/Edges (E)")
+            col.operator("mesh.inset_faces", text="Inset Faces (I)")
+            col.separator()
+            
+            # EDIT MODE SPECIFIC - Modify Existing
+            col.label(text="Edit Mode - Modify Existing:")
+            col.operator("mesh.bevel", text="Bevel Edges/Vertices (Ctrl+B)")
+            col.operator("mesh.loopcut_slide", text="Add Loop Cut (Ctrl+R)")
+            col.operator("mesh.shrink_fatten", text="Shrink/Fatten Along Normals (Alt+S)")
+            col.separator()
+            
+            # VERTEX OPERATIONS
+            col.label(text="Edit Mode - Vertex Tools:")
+            col.operator("mesh.merge", text="Merge Vertices (M)")
+            col.operator("mesh.rip_vertices", text="Rip Vertices (V)")
+            col.operator("mesh.fill", text="Fill Faces (F)")
+            col.separator()
+            
+            # ADVANCED HELPERS
+            col.label(text="Advanced Options:")
+            col.operator("transform.proportional_edit", text="Toggle Proportional Editing (O)")
+            col.prop(context.tool_settings, "use_snap", text="Enable Snapping") 
+
 
         # 🧩 World Origin
         box = layout.box()
@@ -161,12 +212,44 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         row.prop(scene, "show_world_origin", text="World Origin", emboss=False, icon='ORIENTATION_GLOBAL')
         if scene.show_world_origin:
             col = box.column(align=True)
-            # Add these to your World Origin section:
-            col.operator("view3d.view_all", text="Frame All Objects (see everything)")
-            col.operator("view3d.snap_cursor_to_center", text="Reset 3D Cursor to World Origin (0,0,0)")
-            col.operator("object.location_clear", text="Move Selected Object to World Origin").clear_delta = False
-            col.operator("object.rotation_clear", text="Reset Selected Object Rotation").clear_delta = False
-            col.operator("object.scale_clear", text="Reset Selected Object Scale").clear_delta = False
+            
+            # THE WHY - What is World Origin?
+            col.label(text="World Origin = The Center of Your 3D Space")
+            col.label(text="Located at coordinates (0,0,0)")
+            col.label(text="Reference point for everything in your scene")
+            col.separator()
+            
+            # NAVIGATION & VIEWING
+            col.label(text="Navigation:")
+            col.operator("view3d.view_all", text="Frame All Objects (Home)")
+            col.operator("view3d.view_center_cursor", text="Center View on World Origin")
+            col.label(text="• Frame All: See everything in your scene")
+            col.label(text="• Center View: Focus on the world center")
+            col.separator()
+            
+            # 3D CURSOR CONTROL
+            col.label(text="3D Cursor (The Red & White Target):")
+            col.operator("view3d.snap_cursor_to_center", text="Reset 3D Cursor to World Origin")
+            col.label(text="• 3D Cursor marks where new objects appear")
+            col.label(text="• Shift+Right-click to move cursor anywhere")
+            col.separator()
+            
+            # MOVING OBJECTS TO WORLD ORIGIN
+            col.label(text="Move Objects to World Origin:")
+            col.operator("object.location_clear", text="Move Selected to World Origin").clear_delta = False
+            col.operator("object.rotation_clear", text="Reset Selected Rotation").clear_delta = False
+            col.operator("object.scale_clear", text="Reset Selected Scale").clear_delta = False
+            col.label(text="• Location: Moves object to (0,0,0)")
+            col.label(text="• Rotation: Straightens object")
+            col.label(text="• Scale: Returns to original size")
+            col.separator()
+            
+            # SHOWING ORIGINS IN VIEWPORT
+            col.label(text="Show Reference Points:")
+            col.prop(context.space_data.overlay, "show_object_origins", text="Show All Object Origins")
+            col.prop(context.space_data.overlay, "show_cursor", text="Show 3D Cursor")
+            col.label(text="• Orange dots = Object centers")
+            col.label(text="• Red/white target = 3D cursor")
 
         # 🧩 Object Origin
         box = layout.box()
@@ -259,56 +342,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.operator("view3d.snap_cursor_to_center", text="Reset Cursor to World Origin (0,0,0)")      
 
 
-        # 🧩 Transform and Manipulation
-        box = layout.box()
-        row = box.row()
-        row.prop(scene, "show_transform", text="Transform and Manipulation", emboss=False, icon='ORIENTATION_GIMBAL')
-        if scene.show_transform:
-            col = box.column(align=True)
-            
-            # THE WHY - What is Transform?
-            col.label(text="Transform = Change Position, Rotation, Scale")
-            col.label(text="Works in: Object Mode & Edit Mode")
-            col.separator()
-            
-            # CORE TRANSFORMS (work everywhere)
-            col.label(text="Basic Transforms:")
-            row = col.row()
-            row.scale_y = 1.2
-            row.operator("transform.translate", text="Move (G)")
-            row.operator("transform.rotate", text="Rotate (R)")
-            row.operator("transform.resize", text="Scale (S)")
-            
-            # CONSTRAINT HELPERS
-            col.label(text="Axis Constraints (after G/R/S):")
-            col.label(text="• X-axis only: X • Y-axis only: Y • Z-axis only: Z")
-            col.label(text="• Local axes: XX, YY, ZZ")
-            col.separator()
-            
-            # EDIT MODE SPECIFIC
-            col.label(text="Edit Mode - Create New Geometry:")
-            col.operator("mesh.extrude_region_move", text="Extrude Faces/Edges (E)")
-            col.operator("mesh.inset_faces", text="Inset Faces (I)")
-            col.separator()
-            
-            # EDIT MODE SPECIFIC - Modify Existing
-            col.label(text="Edit Mode - Modify Existing:")
-            col.operator("mesh.bevel", text="Bevel Edges/Vertices (Ctrl+B)")
-            col.operator("mesh.loopcut_slide", text="Add Loop Cut (Ctrl+R)")
-            col.operator("mesh.shrink_fatten", text="Shrink/Fatten Along Normals (Alt+S)")
-            col.separator()
-            
-            # VERTEX OPERATIONS
-            col.label(text="Edit Mode - Vertex Tools:")
-            col.operator("mesh.merge", text="Merge Vertices (M)")
-            col.operator("mesh.rip_vertices", text="Rip Vertices (V)")
-            col.operator("mesh.fill", text="Fill Faces (F)")
-            col.separator()
-            
-            # ADVANCED HELPERS
-            col.label(text="Advanced Options:")
-            col.operator("transform.proportional_edit", text="Toggle Proportional Editing (O)")
-            col.prop(context.tool_settings, "use_snap", text="Enable Snapping")    
+   
 
         # 🧩 Object Mode
         box = layout.box()
@@ -458,7 +492,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                 col.label(text="⚠ No Active Camera in Scene")
                 col.operator("object.camera_add", text="Add Camera to Scene")
                 col.separator()
-                return  # Don't show other options if no camera
+                pass  # Don't show other options if no camera
             
             # CAMERA VIEWING
             col.label(text="Camera View:")
@@ -522,11 +556,94 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         row.prop(scene, "show_render", text="Render", emboss=False, icon='RENDER_STILL')
         if scene.show_render:
             col = box.column(align=True)
-            col.label(text="Render:")
-            col.operator("render.render", text="Render Image: F12")
-            col.operator("render.render", text="Render Animation: Ctrl + F12").animation = True
-            col.operator("image.open", text="View Image: F11")
-            col.operator("render.opengl", text="View Animation: Ctrl + F11")
+            
+            # THE WHY - What is Rendering?
+            col.label(text="Render = Create Final Image/Video")
+            col.label(text="Converts 3D scene into 2D picture")
+            col.separator()
+            
+            # RENDER ENGINE
+            col.label(text="Render Engine:")
+            col.prop(context.scene.render, "engine", text="")
+            if context.scene.render.engine == 'BLENDER_EEVEE':
+                col.label(text="• Eevee = Fast, good for previews")
+            elif context.scene.render.engine == 'CYCLES':
+                col.label(text="• Cycles = Slow, photorealistic")
+            elif context.scene.render.engine == 'BLENDER_WORKBENCH':
+                col.label(text="• Workbench = Very fast, simple")
+            col.separator()
+            
+            # RENDER ACTIONS
+            col.label(text="Render Actions:")
+            col.operator("render.render", text="Render Image (F12)")
+            col.operator("render.view_show", text="View Last Render (F11)")
+            col.separator()
+            
+            # ANIMATION
+            col.label(text="Animation:")
+            col.operator("render.render", text="Render Animation (Ctrl + F12)").animation = True
+            col.operator("render.play_rendered_anim", text="Play Rendered Animation")
+            col.separator()
+            
+            # OUTPUT SETTINGS
+            col.label(text="Output Settings:")
+            col.prop(context.scene.render, "resolution_x", text="Width")
+            col.prop(context.scene.render, "resolution_y", text="Height")
+            col.prop(context.scene.render, "resolution_percentage", text="Quality %")
+            col.label(text="• 100% = Full quality, 50% = Half size")
+            col.separator()
+            
+            # FILE FORMAT
+            col.label(text="File Format:")
+            col.prop(context.scene.render.image_settings, "file_format", text="")
+            col.prop(context.scene.render, "filepath", text="Save Location")
+            col.separator()
+            
+            # SAMPLING (For Cycles/Eevee)
+            if context.scene.render.engine in ['CYCLES', 'BLENDER_EEVEE']:
+                col.label(text="Quality Settings:")
+                if context.scene.render.engine == 'CYCLES':
+                    col.prop(context.scene.cycles, "samples", text="Samples")
+                    col.label(text="• More samples = Better quality + Slower")
+                elif context.scene.render.engine == 'BLENDER_EEVEE':
+                    col.prop(context.scene.eevee, "taa_render_samples", text="Samples")
+                col.separator()
+            
+            # VIEWPORT RENDER
+            col.label(text="Quick Preview:")
+            col.operator("render.opengl", text="Viewport Render (Current View)")
+            col.label(text="• Fast render of current viewport")
+            col.separator()
+            
+            # RENDER REGION
+            col.label(text="Partial Render:")
+            col.operator("view3d.render_border", text="Set Render Border (Ctrl + B)")
+            col.prop(context.scene.render, "use_border", text="Use Border")
+            col.label(text="• Render only part of image (faster testing)")
+            col.separator()
+            
+            # COMMON ISSUES
+            col.label(text="Common Issues:")
+            col.label(text="• Black render = No lights in scene")
+            col.label(text="• Noisy render = Increase samples")
+            col.label(text="• Slow render = Lower samples/resolution")
+            col.separator()
+            
+            # LIGHTING CHECK
+            lights_in_scene = [obj for obj in context.scene.objects if obj.type == 'LIGHT']
+            if not lights_in_scene and context.scene.render.engine != 'BLENDER_WORKBENCH':
+                col.label(text="⚠ No Lights in Scene")
+                col.operator("object.light_add", text="Add Light").type = 'SUN'
+            else:
+                col.label(text=f"✓ {len(lights_in_scene)} Light(s) in Scene")
+            
+            # MATERIAL CHECK
+            if context.active_object and context.active_object.type == 'MESH':
+                if not context.active_object.material_slots:
+                    col.label(text="⚠ No Materials on Active Object")
+                    col.operator("object.material_slot_add", text="Add Material Slot")
+                else:
+                    col.label(text="✓ Materials Present")
             
         # 🧩 About
         box = layout.box()
@@ -534,34 +651,89 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         row.prop(scene, "show_about", text="About", emboss=False, icon='INFO')
         if scene.show_about:
             col = box.column(align=True)
-            col.label(text="Welcome to Blender CheatSheets:")
-            col.label(text="=====")
-            col.label(text="This tool is designed to help")
-            col.label(text="Modellers of all ages")
-            col.label(text="access Blenders common functions")
-            col.label(text="in an easy to use toolbar.")
-            col.label(text="Transparent and easily accessible")
-            col.label(text="even for Newbies, with standard")
-            col.label(text="terminology and accessibility")
-            col.label(text="to the most common keyboard,")
-            col.label(text="mouse and numpad controls.")
-            col.label(text="=====")
-            col.label(text="Blender CheatSheets is free for life")
-            col.label(text="and if you would like to support us")
-            col.label(text="so we can keep this addon up-to-date")
-            col.label(text="please feel free to donate, sponsor")
-            col.label(text="and help fund this addon.")
-            col.label(text="=====")
-            col.label(text="Blender CheatSheets will only be")
-            col.label(text="for LTS versions.")
-            col.label(text="It will probably run on >3.x")
-            col.label(text="=====")
-            col.label(text="Enjoy using Blender with new eyes")
-            col.label(text="=====")
-            col.label(text="DEAD DOG DOWN - GAME STUDIO")
-            col.label(text="=====")
-            col.label(text="Funders welcome via email")
-            col.label(text="deaddogdown.gamestudio@gmail.com")
+            
+            # HEADER WITH LOGO SPACE
+            header_box = col.box()
+            header_col = header_box.column(align=True)
+            header_col.scale_y = 1.2
+            header_col.label(text="🎯 BLENDER CHEATSHEETS", icon='COMMUNITY')
+            header_col.label(text="Making Blender Accessible for Everyone")
+            
+            col.separator()
+            
+            # MISSION STATEMENT
+            mission_box = col.box()
+            mission_col = mission_box.column(align=True)
+            mission_col.label(text="📋 Our Mission:")
+            mission_col.label(text="• Remove the learning curve barriers")
+            mission_col.label(text="• Make Blender accessible to all ages")
+            mission_col.label(text="• Provide transparent, easy-to-use tools")
+            mission_col.label(text="• Use standard terminology")
+            mission_col.label(text="• Expose hidden keyboard shortcuts")
+            
+            col.separator()
+            
+            # VERSION INFO
+            version_box = col.box()
+            version_col = version_box.column(align=True)
+            version_col.label(text="🔧 Version Info:")
+            version_col.label(text="• Designed for Blender 3.6+ LTS")
+            version_col.label(text="• Focus on core modeling essentials")
+            version_col.label(text="• Free for life under GPLv2")
+            version_col.label(text="• Regular updates for LTS versions")
+            
+            col.separator()
+            
+            # DEVELOPER INFO
+            dev_box = col.box()
+            dev_col = dev_box.column(align=True)
+            dev_col.label(text="🎮 DEAD DOG DOWN GAME STUDIO")
+            dev_col.separator()
+            
+            # CLICKABLE WEBSITE
+            website_row = dev_col.row()
+            website_row.operator("wm.url_open", text="🌐 Visit Our Website", 
+                                icon='URL').url = "https://deaddogdown.github.io/"
+            
+            # CLICKABLE EMAIL
+            email_row = dev_col.row()
+            email_row.operator("wm.url_open", text="✉️ Contact Us", 
+                              icon='FILE_TEXT').url = "mailto:deaddogdown.gamestudio@gmail.com"
+            
+            col.separator()
+            
+            # SUPPORT SECTION
+            support_box = col.box()
+            support_col = support_box.column(align=True)
+            support_col.label(text="💝 Support This Project:")
+            support_col.label(text="This addon is completely free, but")
+            support_col.label(text="your support helps us maintain and")
+            support_col.label(text="improve it for the community.")
+            support_col.separator()
+            
+            # SUPPORT ACTIONS
+            support_row = support_col.row(align=True)
+            support_row.operator("wm.url_open", text="⭐ GitHub", 
+                                icon='FILE_FOLDER').url = "https://github.com/deaddogdown"
+            support_row.operator("wm.url_open", text="💰 Sponsor", 
+                                icon='HEART').url = "mailto:deaddogdown.gamestudio@gmail.com?subject=Sponsorship"
+            
+            col.separator()
+            
+            # INSPIRATIONAL FOOTER
+            footer_box = col.box()
+            footer_col = footer_box.column(align=True)
+            footer_col.scale_y = 0.8
+            footer_col.label(text="🚀 'Enjoy using Blender with new eyes'")
+            footer_col.label(text="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            footer_col.label(text="Making complex software simple, one tool at a time.")
+            
+            # VERSION/BUILD INFO (Optional)
+            col.separator()
+            info_col = col.column(align=True)
+            info_col.scale_y = 0.7
+            info_col.label(text="Build: v1.0 | License: GPLv2 | Community Driven")
+            
 
 class SHORTCUTS_OT_ObjectMode(bpy.types.Operator):
     bl_idname = "object.switch_to_object_mode"
