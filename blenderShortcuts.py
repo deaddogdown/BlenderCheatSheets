@@ -40,6 +40,18 @@ def unregister_properties():
         if hasattr(bpy.types.Scene, prop):
             delattr(bpy.types.Scene, prop)
 
+class OBJECT_OT_reset_transforms(bpy.types.Operator):
+    bl_idname = "object.reset_transforms"
+    bl_label = "Reset Rotation & Scale"
+    bl_description = "Clear rotation and scale of selected objects"
+
+    def execute(self, context):
+        # Clear rotation
+        bpy.ops.object.rotation_clear(clear_delta=False)
+        # Clear scale
+        bpy.ops.object.scale_clear(clear_delta=False)
+        return {'FINISHED'}
+        
 class SHORTCUTS_PT_Panel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -49,7 +61,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         scene = context.scene
-        
+
         # Mode switch buttons at the top with visual feedback
         row = layout.row()
         row.scale_y = 1.5
@@ -69,9 +81,27 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             sub_row.alert = True
         sub_row.operator("object.switch_to_edit_mode", text="Edit Mode", icon='EDITMODE_HLT')
 
+        #layout.separator()
+        layout.label(text="Reset Selected Transforms:")    
+        # New section: Reset Rotation & Reset Scale
+        row = layout.row()  # Create a new row for the reset buttons
+        
+        # Reset Rotation
+        sub_row = row.row()
+        sub_row.operator("object.rotation_clear", text="Reset Rotation").clear_delta = False
+
+        # Reset Scale
+        sub_row = row.row()
+        sub_row.operator("object.scale_clear", text="Reset Scale").clear_delta = False           
+        # Combined Reset Button
+        layout.operator("object.reset_transforms", text="Reset Rotation & Scale")
+        #layout.separator()
+        layout.label(text="• Reset Rotation: Straightens object")
+        layout.label(text="• Reset Scale: Returns to original size")
+        
         layout.separator()
         
-        
+        layout.label(text="Common Commands:")    
 
         # 🧩 General
         box = layout.box()
@@ -237,18 +267,16 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             # MOVING OBJECTS TO WORLD ORIGIN
             col.label(text="Move Objects to World Origin:")
             col.operator("object.location_clear", text="Move Selected to World Origin").clear_delta = False
-            col.operator("object.rotation_clear", text="Reset Selected Rotation").clear_delta = False
-            col.operator("object.scale_clear", text="Reset Selected Scale").clear_delta = False
+            #col.operator("object.rotation_clear", text="Reset Selected Rotation").clear_delta = False
+            #col.operator("object.scale_clear", text="Reset Selected Scale").clear_delta = False
             col.label(text="• Location: Moves object to (0,0,0)")
-            col.label(text="• Rotation: Straightens object")
-            col.label(text="• Scale: Returns to original size")
+            #col.label(text="• Rotation: Straightens object")
+            #col.label(text="• Scale: Returns to original size")
             col.separator()
             
             # SHOWING ORIGINS IN VIEWPORT
             col.label(text="Show Reference Points:")
-            col.prop(context.space_data.overlay, "show_object_origins", text="Show All Object Origins")
             col.prop(context.space_data.overlay, "show_cursor", text="Show 3D Cursor")
-            col.label(text="• Orange dots = Object centers")
             col.label(text="• Red/white target = 3D cursor")
 
         # 🧩 Object Origin
@@ -760,6 +788,7 @@ classes = (
     SHORTCUTS_PT_Panel,
     SHORTCUTS_OT_ObjectMode,
     SHORTCUTS_OT_EditMode,
+    OBJECT_OT_reset_transforms,
 )
 
 def register():
