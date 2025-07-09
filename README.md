@@ -13,7 +13,7 @@ A simple and intuitive toolbar designed to help **Blender modellers of all skill
 - Commands grouped first by category, then core usage patterns and alpha sorting to find common commands easily
 - Shorcuts keys listed with every command where possible. Otherwise just click the button
 - Reduces cognitive load of trying to remember a zillion commands and forgetting what a shortcut was
-- Helps you spend more time creating and less time debugging because the steps always break
+- Less 3d debugging time - More productive 3d creating time
 - Keeps you in the creative flow - Mega Bonus!
 - Compatible with **Blender LTS versions**
 - 100% **free and open source**, forever
