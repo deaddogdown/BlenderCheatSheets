@@ -4,8 +4,10 @@ A simple and intuitive toolbar designed to help **Blender modellers of all skill
 
 ## 🧰 Features
 
-- Clean, beginner-friendly UI panel inside Blender
+- Clean friendly UI panel inside Blender for users as any skill level
+- Consistency in 3d Language concepts
 - Lists common keyboard, mouse, and numpad shortcuts
+- Provides explicit button alternatives to reduce cognitive load
 - Designed for clarity and accessibility
 - Compatible with **Blender LTS versions**
 - 100% **free and open source**, forever
