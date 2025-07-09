@@ -1,8 +1,14 @@
 import bpy
+from bpy.props import BoolProperty
+from bpy.props import EnumProperty
+
+
+
 
 # Register collapsible section properties
 def register_properties():
     props = [
+
         ('show_general', False),
         ('show_viewport', False),
         ('show_transform', False),
@@ -13,7 +19,20 @@ def register_properties():
         ('show_edit_mode', False),
         ('show_camera', False),        
         ('show_render', False),
-        ('show_about', False)
+        ('show_about', False),
+        #
+        #('shortcuts_show_help', False),
+        ('show_help_general', False),
+        ('show_help_viewport', False),
+        ('show_help_transform', False),
+        ('show_help_world_origin', False),
+        ('show_help_object_origin', False),
+        ('show_help_cursor', False),
+        ('show_help_object_mode', False),
+        ('show_help_edit_mode', False),
+        ('show_help_camera', False),
+        ('show_help_render', False),
+        ('show_help_about', False),
     ]
     for prop_name, default in props:
         setattr(bpy.types.Scene, prop_name, bpy.props.BoolProperty(
@@ -24,6 +43,7 @@ def register_properties():
 
 def unregister_properties():
     props = [
+
         'show_general',
         'show_viewport',
         'show_transform',
@@ -35,10 +55,64 @@ def unregister_properties():
         'show_camera',        
         'show_render',
         'show_about'
+        #
+        #'shortcuts_show_help',
+        'show_help_general',
+        'show_help_viewport',
+        'show_help_transform',
+        'show_help_world_origin',
+        'show_help_object_origin',
+        'show_help_cursor',
+        'show_help_object_mode',
+        'show_help_edit_mode',
+        'show_help_camera',
+        'show_help_render',
+        'show_help_about',
     ]
     for prop in props:
         if hasattr(bpy.types.Scene, prop):
             delattr(bpy.types.Scene, prop)
+
+
+
+# Optional: Add a custom operator to quickly set common unit combinations
+class SHORTCUTS_OT_SetUnits(bpy.types.Operator):
+    """Set units to common combinations"""
+    bl_idname = "shortcuts.set_units"
+    bl_label = "Set Units"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    unit_preset: EnumProperty(
+        name="Unit Preset",
+        description="Choose a common unit setup",
+        items=[
+            ('DEFAULT', "Default (None)", "Blender's default units"),
+            ('METRIC_M', "Metric - Meters", "Metric system with meters"),
+            ('METRIC_CM', "Metric - Centimeters", "Metric system with centimeters"),
+            ('IMPERIAL_FT', "Imperial - Feet", "Imperial system with feet"),
+            ('IMPERIAL_IN', "Imperial - Inches", "Imperial system with inches"),
+        ]
+    )
+    
+    def execute(self, context):
+        scene = context.scene
+        
+        if self.unit_preset == 'DEFAULT':
+            scene.unit_system = 'NONE'
+        elif self.unit_preset == 'METRIC_M':
+            scene.unit_system = 'METRIC'
+            scene.unit_length = 'METERS'
+        elif self.unit_preset == 'METRIC_CM':
+            scene.unit_system = 'METRIC'
+            scene.unit_length = 'CENTIMETERS'
+        elif self.unit_preset == 'IMPERIAL_FT':
+            scene.unit_system = 'IMPERIAL'
+            scene.unit_length = 'FEET'
+        elif self.unit_preset == 'IMPERIAL_IN':
+            scene.unit_system = 'IMPERIAL'
+            scene.unit_length = 'INCHES'
+        
+        return {'FINISHED'}
 
 class OBJECT_OT_reset_transforms(bpy.types.Operator):
     bl_idname = "object.reset_transforms"
@@ -51,6 +125,86 @@ class OBJECT_OT_reset_transforms(bpy.types.Operator):
         # Clear scale
         bpy.ops.object.scale_clear(clear_delta=False)
         return {'FINISHED'}
+
+# The operator class
+class MESH_OT_smart_snap(bpy.types.Operator):
+    bl_idname = "mesh.smart_snap"
+    bl_label = "Smart Snap"
+    bl_description = "Set snap to: Vertex, Closest, Include Active, Move"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+        ts = context.tool_settings
+        
+        # Enable snapping
+        ts.use_snap = True
+        
+        # Set to Vertex
+        ts.snap_elements = {'VERTEX'}
+        
+        # Set to Closest
+        ts.snap_target = 'CLOSEST'
+        
+        # Include Active (this prevents hunting other selected vertices)
+        ts.use_snap_self = True
+        
+        # Set transform mode to Move (this might be automatic)
+        # ts.snap_transform = True  # This might not be needed
+        
+        return {'FINISHED'}
+
+# The operator functions would need to be defined elsewhere in your addon:
+class MESH_OT_smart_snap_vertex(bpy.types.Operator):
+    bl_idname = "mesh.smart_snap_vertex"
+    bl_label = "Smart Snap to Vertex"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+        # Toggle: if already in vertex snap mode, turn off snapping
+        if (context.tool_settings.use_snap and 
+            context.tool_settings.snap_elements == {'VERTEX'}):
+            context.tool_settings.use_snap = False
+        else:
+            # Enable snapping and set to vertex mode
+            context.tool_settings.use_snap = True
+            context.tool_settings.snap_elements = {'VERTEX'}
+            context.tool_settings.snap_target = 'CLOSEST'
+        return {'FINISHED'}
+
+class MESH_OT_smart_snap_edge(bpy.types.Operator):
+    bl_idname = "mesh.smart_snap_edge"
+    bl_label = "Smart Snap to Edge Mid"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+        # Toggle: if already in edge midpoint snap mode, turn off snapping
+        if (context.tool_settings.use_snap and 
+            context.tool_settings.snap_elements == {'EDGE_MIDPOINT'}):
+            context.tool_settings.use_snap = False
+        else:
+            # Enable snapping and set to edge midpoint mode
+            context.tool_settings.use_snap = True
+            context.tool_settings.snap_elements = {'EDGE_MIDPOINT'}
+            context.tool_settings.snap_target = 'CLOSEST'
+        return {'FINISHED'}
+
+class MESH_OT_smart_snap_face(bpy.types.Operator):
+    bl_idname = "mesh.smart_snap_face"
+    bl_label = "Smart Snap to Face Center"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+        # Toggle: if already in face snap mode, turn off snapping
+        if (context.tool_settings.use_snap and 
+            context.tool_settings.snap_elements == {'FACE'}):
+            context.tool_settings.use_snap = False
+        else:
+            # Enable snapping and set to face center mode
+            context.tool_settings.use_snap = True
+            context.tool_settings.snap_elements = {'FACE'}
+            context.tool_settings.snap_target = 'CENTER'
+        return {'FINISHED'}
+
         
 class SHORTCUTS_PT_Panel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
@@ -61,93 +215,169 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         scene = context.scene
+        
+        #layout.label(text=f"Help Enabled: {scene.shortcuts_show_help}")
+        # Help toggle at top
+        #row = layout.row()
+        #row.scale_y = 1.2
+        #if scene.shortcuts_show_help:
+            #row.prop(scene, "shortcuts_show_help", text="BEGINNER USER", icon='HIDE_ON')
+        #else:
+            #row.prop(scene, "shortcuts_show_help", text="ADVANCED USER", icon='HELP')
 
         # Mode switch buttons at the top with visual feedback
         row = layout.row()
         row.scale_y = 1.5
-
         obj = context.object
         current_mode = obj.mode if obj else 'OBJECT'
-
+        
         # Object Mode button
         sub_row = row.row()
         if current_mode == 'OBJECT':
             sub_row.alert = True
         sub_row.operator("object.switch_to_object_mode", text="Object Mode", icon='OBJECT_DATAMODE')
-
+        
         # Edit Mode button
         sub_row = row.row()
         if current_mode == 'EDIT':
             sub_row.alert = True
         sub_row.operator("object.switch_to_edit_mode", text="Edit Mode", icon='EDITMODE_HLT')
-
-        #layout.separator()
-        layout.label(text="Reset Selected Transforms:")    
-        # New section: Reset Rotation & Reset Scale
-        row = layout.row()  # Create a new row for the reset buttons
         
-        # Reset Rotation
-        sub_row = row.row()
-        sub_row.operator("object.rotation_clear", text="Reset Rotation").clear_delta = False
-
-        # Reset Scale
-        sub_row = row.row()
-        sub_row.operator("object.scale_clear", text="Reset Scale").clear_delta = False           
-        # Combined Reset Button
-        layout.operator("object.reset_transforms", text="Reset Rotation & Scale")
-        #layout.separator()
-        layout.label(text="• Reset Rotation: Straightens object")
-        layout.label(text="• Reset Scale: Returns to original size")
         
-        layout.separator()
-        
-        layout.label(text="Common Commands:")    
+        #if scene.shortcuts_show_help:
+            #layout.separator()
+            #layout.label(text="Common Commands:")    
 
         # 🧩 General
         box = layout.box()
         row = box.row()
-        row.prop(scene, "show_general", text="General", emboss=False, icon='INFO')
+        row.prop(scene, "show_general", text="GENERAL", emboss=False, icon='INFO')
+        
+        # Help toggle specific to this section
+        #if scene.shortcuts_show_help:
+        row.prop(scene, "show_help_general", text="", icon='HELP' if scene.show_help_general else 'HIDE_ON', toggle=True)
+
+
         if scene.show_general:
             col = box.column(align=True)
+        
+            # Units Selection Section
+            if scene.show_help_general:
+                col.label(text="UNITS: Choose your measurement system")
+            
+            # Units dropdown - accessing the unit settings properly
+            row = col.row()
+            row.prop(scene.unit_settings, "system", text="Unit System")
+            
+            # Show length unit when metric or imperial is selected
+            if scene.unit_settings.system in {'METRIC', 'IMPERIAL'}:
+                row = col.row()
+                row.prop(scene.unit_settings, "length_unit", text="Length Unit")
+            
+            # Newbie-friendly descriptions
+            #layout.separator()
+            if scene.show_help_general:
+                col.label(text="Unit Guide:")
+                if scene.unit_settings.system == 'NONE':
+                    col.label(text="• None: Uses Blender's default units")
+                    col.label(text="• Good for beginners learning basics")
+                elif scene.unit_settings.system == 'METRIC':
+                    col.label(text="• Metric: Meters, centimeters, etc.")
+                    col.label(text="• Global measurement system for precise work")
+                elif scene.unit_settings.system == 'IMPERIAL':
+                    col.label(text="• Imperial: Feet, inches, etc.")
+                    col.label(text="• Common in USA architecture/design")
+            
+            col.separator()
+            col.separator()
+            col.operator("object.transform_apply", text="Apply Transforms - Rotation and Scale (Ctrl + A)")
+            if scene.show_help_general:
+                col.label(text="• Apply Transforms: Makes current rotation/scale permanent")
+                col.label(text="• Used after Rotation and Scaling")
+            
+            col.separator()
+            col.separator()
+            col.label(text="Reset Selected Transforms:")    
+            
+            # New section: Reset Rotation & Reset Scale
+            row = col.row()  # Create a new row for the reset buttons
+            
+            # Reset Rotation
+            sub_row = row.row()
+            sub_row.operator("object.rotation_clear", text="Reset Rotation (Alt + R)").clear_delta = False
+            
+            # Reset Scale
+            sub_row = row.row()
+            sub_row.operator("object.scale_clear", text="Reset Scale (Alt + S)").clear_delta = False           
+            col.separator()
+            # Combined Reset Button
+            col.operator("object.reset_transforms", text="Reset Rotation & Scale")
+            
+            if scene.show_help_general:
+                col.label(text="• Reset Rotation: Straightens object")
+                col.label(text="• Reset Scale: Returns to original size")
+                col.label(text="• Undo Transforms: Removes current rotation/scale")
+            col.separator()
+            col.separator()
+        
+            col.label(text="Useful Commands:")    
             col.operator("wm.search_menu", text="Search Operators: F3 or Spacebar")
             col.operator("object.duplicate_move", text="Duplicate: Shift + D")
             col.operator("object.make_single_user", text="Make Unique: U")
             
             # Info labels for shortcuts that don't need operators:
             col.separator()
-            col.label(text="Keyboard Shortcuts:")
-            col.label(text="• Undo: Ctrl + Z")
-            col.label(text="• Redo: Ctrl + Shift + Z")
-            col.label(text="• Copy: Ctrl + C")
-            col.label(text="• Paste: Ctrl + V")
+            if scene.show_help_general:
+                col.label(text="Keyboard Shortcuts:")
+                col.label(text="• Undo: Ctrl + Z")
+                col.label(text="• Redo: Ctrl + Shift + Z")
+                col.label(text="• Copy: Ctrl + C")
+                col.label(text="• Paste: Ctrl + V")
+            
+            col.separator()
+            col.separator()
+            
             
         
         # 🧩 Viewport
         box = layout.box()
         row = box.row()
-        row.prop(scene, "show_viewport", text="Viewport", emboss=False, icon='VIEW_CAMERA')
+        row.prop(scene, "show_viewport", text="VIEWPORT", emboss=False, icon='VIEW_CAMERA')
+        
+        row.prop(scene, "show_help_viewport", text="", icon='HELP' if scene.show_help_viewport else 'HIDE_ON', toggle=True)
+        
         if scene.show_viewport:
             col = box.column(align=True)
             
+            # VIEWPORT SETTINGS (Less common but useful)
+            col.separator()
+            col.label(text="Viewport Settings:")
+            if hasattr(context.preferences.inputs, 'use_mouse_emulate_3_button'):
+                col.prop(context.preferences.inputs, "use_mouse_emulate_3_button", text="Emulate 3 Button Mouse")
+            col.prop(context.preferences.view, "smooth_view", text="Smooth View Transitions")
+            
             # THE WHY - What is the Viewport?
-            col.label(text="Viewport = Your 3D Window")
-            col.label(text="Navigate (move yourself) vs Transform (move objects)")
-            col.separator()
+            if scene.show_help_viewport:
+                col.label(text="Viewport = Your 3D Window")
+                col.label(text="Navigate (move yourself) vs Transform (move objects)")
+                col.separator()
+                
+                # MOUSE NAVIGATION (Most Important - Put First)
+                col.label(text="Mouse Navigation:")
+                col.label(text="• Orbit: Middle Mouse Button (MMB) Drag")
+                col.label(text="• Pan: Shift + MMB Drag") 
+                col.label(text="• Zoom: Scroll Wheel or Ctrl + MMB Drag")
             
-            # MOUSE NAVIGATION (Most Important - Put First)
-            col.label(text="Mouse Navigation:")
-            col.label(text="• Orbit: Middle Mouse Button (MMB) Drag")
-            col.label(text="• Pan: Shift + MMB Drag") 
-            col.label(text="• Zoom: Scroll Wheel or Ctrl + MMB Drag")
             col.separator()
-            
+            col.separator()
             # QUICK NAVIGATION (High frequency)
             col.label(text="Quick Navigation:")
             col.operator("view3d.view_all", text="Frame All Objects (Home)")
             col.operator("view3d.view_selected", text="Frame Selected (Numpad .)")
             col.operator("view3d.snap_cursor_to_center", text="Reset View Focus (Shift + C)")
-            col.separator()
             
+            col.separator()
+            col.separator()
             # STANDARD VIEWS (For precision work)
             col.label(text="Standard Views (Numpad):")
             row = col.row(align=True)
@@ -159,14 +389,16 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             row.operator("view3d.view_axis", text="Back (Ctrl + 1)").type = 'BACK'
             row.operator("view3d.view_axis", text="Left (Ctrl + 3)").type = 'LEFT'
             
-            col.operator("view3d.view_persportho", text="Perspective/Orthographic Toggle (Numpad 5)")
-            col.separator()
+            col.operator("view3d.view_persportho", text="Perspective/Orthographic (5)")
             
+            col.separator()
+            col.separator()
             # ADVANCED NAVIGATION
             col.label(text="Advanced Navigation:")
             col.operator("view3d.walk", text="Walk Mode (Shift + `)")
-            col.separator()
             
+            col.separator()
+            col.separator()
             # CAMERA OPERATIONS
             col.label(text="Camera:")
             col.operator("view3d.view_camera", text="Toggle Camera View (Numpad 0)")
@@ -177,24 +409,25 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             else:
                 col.label(text="No active camera in scene")
             
-            # VIEWPORT SETTINGS (Less common but useful)
             col.separator()
-            col.label(text="Viewport Settings:")
-            if hasattr(context.preferences.inputs, 'use_mouse_emulate_3_button'):
-                col.prop(context.preferences.inputs, "use_mouse_emulate_3_button", text="Emulate 3 Button Mouse")
-            col.prop(context.preferences.view, "smooth_view", text="Smooth View Transitions")
+            col.separator()
+
 
         # 🧩 Transform and Manipulation
         box = layout.box()
         row = box.row()
-        row.prop(scene, "show_transform", text="Transform and Manipulation", emboss=False, icon='ORIENTATION_GIMBAL')
+        row.prop(scene, "show_transform", text="TRANSFORM and MANIPULATION", emboss=False, icon='ORIENTATION_GIMBAL')
+        
+        row.prop(scene, "show_help_transform", text="", icon='HELP' if scene.show_help_transform else 'HIDE_ON', toggle=True)
+        
         if scene.show_transform:
             col = box.column(align=True)
             
             # THE WHY - What is Transform?
-            col.label(text="Transform = Change Position, Rotation, Scale")
-            col.label(text="Works in: Object Mode & Edit Mode")
-            col.separator()
+            if scene.show_help_transform:
+                col.label(text="Transform = Change Position, Rotation, Scale")
+                col.label(text="Works in: Object Mode & Edit Mode")
+                col.separator()
             
             # CORE TRANSFORMS (work everywhere)
             col.label(text="Basic Transforms:")
@@ -205,159 +438,96 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             row.operator("transform.resize", text="Scale (S)")
             
             # CONSTRAINT HELPERS
-            col.label(text="Axis Constraints (after G/R/S):")
-            col.label(text="• X-axis only: X • Y-axis only: Y • Z-axis only: Z")
-            col.label(text="• Local axes: XX, YY, ZZ")
+            if scene.show_help_transform:
+                col.label(text="Axis Constraints (after G/R/S):")
+                col.label(text="• X-axis only: X • Y-axis only: Y • Z-axis only: Z")
+                col.label(text="• Local axes: XX, YY, ZZ")
+                
             col.separator()
-            
-            # EDIT MODE SPECIFIC
-            col.label(text="Edit Mode - Create New Geometry:")
-            col.operator("mesh.extrude_region_move", text="Extrude Faces/Edges (E)")
-            col.operator("mesh.inset_faces", text="Inset Faces (I)")
-            col.separator()
-            
-            # EDIT MODE SPECIFIC - Modify Existing
-            col.label(text="Edit Mode - Modify Existing:")
-            col.operator("mesh.bevel", text="Bevel Edges/Vertices (Ctrl+B)")
-            col.operator("mesh.loopcut_slide", text="Add Loop Cut (Ctrl+R)")
-            col.operator("mesh.shrink_fatten", text="Shrink/Fatten Along Normals (Alt+S)")
-            col.separator()
-            
-            # VERTEX OPERATIONS
-            col.label(text="Edit Mode - Vertex Tools:")
-            col.operator("mesh.merge", text="Merge Vertices (M)")
-            col.operator("mesh.rip_vertices", text="Rip Vertices (V)")
-            col.operator("mesh.fill", text="Fill Faces (F)")
-            col.separator()
-            
+            col.separator()  
             # ADVANCED HELPERS
-            col.label(text="Advanced Options:")
-            col.operator("transform.proportional_edit", text="Toggle Proportional Editing (O)")
-            col.prop(context.tool_settings, "use_snap", text="Enable Snapping") 
-
-
-        # 🧩 World Origin
-        box = layout.box()
-        row = box.row()
-        row.prop(scene, "show_world_origin", text="World Origin", emboss=False, icon='ORIENTATION_GLOBAL')
-        if scene.show_world_origin:
-            col = box.column(align=True)
+            col.label(text="Enable Snapping:")
             
-            # THE WHY - What is World Origin?
-            col.label(text="World Origin = The Center of Your 3D Space")
-            col.label(text="Located at coordinates (0,0,0)")
-            col.label(text="Reference point for everything in your scene")
+            col.prop(context.tool_settings, "use_snap", text="Enable Snapping (SHIFT + TAB)") 
+            # Smart Snaps section
+            col.separator()
+            col.label(text="Smart Snaps:")
+            col.operator("mesh.smart_snap", text="Smart Snap", icon='SNAP_VERTEX')
+            col.label(text="• Recommended default snap settings:")
+            col.separator()
+            col.operator("mesh.smart_snap_vertex", text="Smart Snap to Vertex", icon='VERTEXSEL')
+            col.operator("mesh.smart_snap_edge", text="Smart Snap to Edge Mid", icon='EDGESEL') 
+            col.operator("mesh.smart_snap_face", text="Smart Snap to Face Center", icon='FACESEL')
+            col.separator()
+            col.label(text="Proportional Editing:")
+            col.operator("wm.context_toggle", text="Toggle Proportional Editing (O)", icon='PROP_ON').data_path = "tool_settings.use_proportional_edit_objects"
+            
+            col.separator()
             col.separator()
             
-            # NAVIGATION & VIEWING
-            col.label(text="Navigation:")
-            col.operator("view3d.view_all", text="Frame All Objects (Home)")
-            col.operator("view3d.view_center_cursor", text="Center View on World Origin")
-            col.label(text="• Frame All: See everything in your scene")
-            col.label(text="• Center View: Focus on the world center")
-            col.separator()
             
-            # 3D CURSOR CONTROL
-            col.label(text="3D Cursor (The Red & White Target):")
-            col.operator("view3d.snap_cursor_to_center", text="Reset 3D Cursor to World Origin")
-            col.label(text="• 3D Cursor marks where new objects appear")
-            col.label(text="• Shift+Right-click to move cursor anywhere")
-            col.separator()
-            
-            # MOVING OBJECTS TO WORLD ORIGIN
-            col.label(text="Move Objects to World Origin:")
-            col.operator("object.location_clear", text="Move Selected to World Origin").clear_delta = False
-            #col.operator("object.rotation_clear", text="Reset Selected Rotation").clear_delta = False
-            #col.operator("object.scale_clear", text="Reset Selected Scale").clear_delta = False
-            col.label(text="• Location: Moves object to (0,0,0)")
-            #col.label(text="• Rotation: Straightens object")
-            #col.label(text="• Scale: Returns to original size")
-            col.separator()
-            
-            # SHOWING ORIGINS IN VIEWPORT
-            col.label(text="Show Reference Points:")
-            col.prop(context.space_data.overlay, "show_cursor", text="Show 3D Cursor")
-            col.label(text="• Red/white target = 3D cursor")
-
-        # 🧩 Object Origin
-        box = layout.box()
-        row = box.row()
-        row.prop(scene, "show_object_origin", text="Object Origin", emboss=False, icon='OBJECT_ORIGIN')
-        if scene.show_object_origin:
-            col = box.column(align=True)
-            
-            # Maybe add this at the start of Object Origin:
-            col.label(text="Object Origin = Pivot Point for:")
-            col.label(text="• Rotation • Scaling • Position")
-            col.separator()
-            
-            # Add this at the top of Object Origin section:
-            col.label(text="Show Origins in Viewport:")
-            col.prop(context.space_data.overlay, "show_object_origins", text="Show All Object Origins")
-            col.prop(context.space_data.overlay, "show_cursor", text="Show 3D Cursor")
-            
-            # Add these explanatory operations:
-            col.label(text="Find & See Origins:")
-            col.operator("view3d.view_selected", text="Focus View on Selected Object")
-            col.operator("object.select_all", text="Select All Objects").action = 'SELECT'
-
-            col.label(text="Origin Placement Options:")
-            col.operator("object.origin_set", text="Origin to Center of Mass").type = 'ORIGIN_CENTER_OF_MASS'
-            col.operator("object.origin_set", text="Origin to Bounding Box Center").type = 'ORIGIN_CENTER_OF_VOLUME'
-            col.operator("object.origin_set", text="Origin to Bottom of Object").type = 'ORIGIN_GEOMETRY'
-
-            # 3D Cursor ↔ Object Origin
-            col.label(text="3D Cursor ↔ Object Origin:")
-            col.operator("view3d.snap_cursor_to_selected", text="Move 3D Cursor to Object Origin")
-            col.operator("view3d.snap_selected_to_cursor", text="Move Object to 3D Cursor").use_offset = False
-
-            # Object Origin ↔ Object Geometry
-            col.label(text="Object Origin ↔ Object Geometry:")
-            col.operator("object.origin_set", text="Move Object Origin to Object Geometry").type = 'ORIGIN_GEOMETRY'
-            col.operator("object.origin_set", text="Move Object Geometry to Object Origin").type = 'GEOMETRY_ORIGIN'
-
-            # 3D Cursor ↔ Object Geometry
-            col.label(text="3D Cursor ↔ Object Geometry:")
-            col.operator("view3d.snap_cursor_to_selected", text="Move 3D Cursor to Object Geometry")
-            col.operator("view3d.snap_selected_to_cursor", text="Move Object Geometry to 3D Cursor").use_offset = True
-
         # 🧩 3D Cursor
         box = layout.box()
         row = box.row()
-        row.prop(scene, "show_cursor", text="3D Cursor", emboss=False, icon='CURSOR')
+        row.prop(scene, "show_cursor", text="3D CURSOR", emboss=False, icon='CURSOR')
+        
+        row.prop(scene, "show_help_cursor", text="", icon='HELP' if scene.show_help_cursor else 'HIDE_ON', toggle=True)
+        
         if scene.show_cursor:
             col = box.column(align=True)
             
             # THE WHY - What is the 3D Cursor?
-            col.label(text="3D Cursor = Universal Reference Point")
-            col.label(text="Use it to: Position • Snap • Create • Measure")
-            col.separator()
+            if scene.show_help_cursor:
+                col.label(text="3D Cursor = Universal Reference Point")
+                col.label(text="Use it to: Position • Snap • Create • Measure")
+                #col.separator()
             
-            # Show the cursor visually
+                # Show the cursor visually
             col.prop(context.space_data.overlay, "show_cursor", text="Show 3D Cursor in Viewport")
+            
             col.separator()
+            col.label(text="KEY COMBINATION FOR ALL BELOW - (Shift + S)")
+                # INVERSE PAIRS - clearly labeled
+            if scene.show_help_cursor:
+                col.label(text="Move TO Cursor ↔ Move FROM Cursor:")
+           
+            # Reset option
+            col.operator("view3d.snap_cursor_to_center", text="Reset Cursor to World Origin (0,0,0)")      
             
-            # INVERSE PAIRS - clearly labeled
-            col.label(text="Move TO Cursor ↔ Move FROM Cursor:")
+            col.separator()
+            col.separator()
+            # Objects
+            col.label(text="• Object Origin:")
+            row = col.row()
+            row.operator("view3d.snap_cursor_to_center", text="Cursor → Origin")
+            row.operator("object.origin_set", text="Origin → Cursor").type = 'ORIGIN_CURSOR'
             
+            col.separator()
+            col.separator()
             # Objects
             col.label(text="• Objects:")
             row = col.row()
             row.operator("view3d.snap_cursor_to_selected", text="Cursor → Object")
             row.operator("view3d.snap_selected_to_cursor", text="Object → Cursor")
             
+            col.separator()
+            col.separator()
             # Vertices (Edit Mode)
             col.label(text="• Vertices (Edit Mode):")
             row = col.row()
             row.operator("view3d.snap_cursor_to_selected", text="Cursor → Vertex")
             row.operator("view3d.snap_selected_to_cursor", text="Vertex → Cursor")
             
+            col.separator()
+            col.separator()
             # Edges (Edit Mode)
             col.label(text="• Edges (Edit Mode):")
             row = col.row()
             row.operator("view3d.snap_cursor_to_selected", text="Cursor → Edge")
             row.operator("view3d.snap_selected_to_cursor", text="Edge → Cursor")
             
+            col.separator()
+            col.separator()
             # Faces (Edit Mode)
             col.label(text="• Faces (Edit Mode):")
             row = col.row()
@@ -365,153 +535,560 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             row.operator("view3d.snap_selected_to_cursor", text="Face → Cursor")
             
             col.separator()
+            col.separator()  
+
+
+        # 🧩 World Origin
+        box = layout.box()
+        row = box.row()
+        row.prop(scene, "show_world_origin", text="WORLD ORIGIN", emboss=False, icon='ORIENTATION_GLOBAL')
+        
+        row.prop(scene, "show_help_world_origin", text="", icon='HELP' if scene.show_help_world_origin else 'HIDE_ON', toggle=True)
+        
+        
+        if scene.show_world_origin:
+            col = box.column(align=True)
             
-            # Reset option
-            col.operator("view3d.snap_cursor_to_center", text="Reset Cursor to World Origin (0,0,0)")      
+            # THE WHY - What is World Origin?
+            if scene.show_help_world_origin:
+                col.label(text="World Origin = The Center of Your 3D Space")
+                col.label(text="Located at coordinates (0,0,0)")
+                col.label(text="Reference point for everything in your scene")
+                col.separator()
+            
+            
+            # 3D CURSOR CONTROL
+            if scene.show_help_world_origin:
+                col.label(text="3D Cursor (The Red & White Target):")
+            col.operator("view3d.snap_cursor_to_center", text="Reset 3D Cursor to World Origin (Shift + S)")
+            
+            
+            if scene.show_help_world_origin:
+                col.label(text="• 3D Cursor marks where new objects appear")
+                col.label(text="• Move cursor anywhere (Shift + RMB)")
+                col.separator()
+            
+            # MOVING OBJECTS TO WORLD ORIGIN
+            if scene.show_help_world_origin:
+                col.label(text="Move Objects to World Origin:")
+                
+            col.operator("object.location_clear", text="Move Selected to World Origin (Alt + G)").clear_delta = False
+            #col.operator("object.rotation_clear", text="Reset Selected Rotation").clear_delta = False
+            #col.operator("object.scale_clear", text="Reset Selected Scale").clear_delta = False
+            if scene.show_help_world_origin:
+                col.label(text="• Location: Moves object to (0,0,0)")
+                #col.label(text="• Rotation: Straightens object")
+                #col.label(text="• Scale: Returns to original size")
+            
+            col.separator()
+            col.separator()
 
 
-   
+        # 🧩 Object Origin
+        box = layout.box()
+        row = box.row()
+        row.prop(scene, "show_object_origin", text="OBJECT ORIGIN", emboss=False, icon='OBJECT_ORIGIN')
+        
+        row.prop(scene, "show_help_object_origin", text="", icon='HELP' if scene.show_help_object_origin else 'HIDE_ON', toggle=True)
+        
+        
+        if scene.show_object_origin:
+            col = box.column(align=True)
+            is_edit_mode = bpy.context.mode == 'EDIT_MESH'
+            
+            
+            # Maybe add this at the start of Object Origin:
+            if scene.show_help_object_origin:
+                col.label(text="Object Origin = Pivot Point for:")
+                col.label(text="Rotation • Scaling • Position for the selected object")
+                col.separator()
+            
+            col.label(text="VIEWING CONTROLS:")
+            # Add this at the top of Object Origin section:
+            
+            col.prop(context.space_data.overlay, "show_object_origins", text="Show All Object Origins")
+            if scene.show_help_object_origin:   
+                col.label(text="Show Origins in Viewport:")
+            
+            col.separator()
+            col.separator()
+            # Add these explanatory operations:
+            col.label(text="Find & See Origins:")
+            col.operator("view3d.view_selected", text="Focus View on Selected Object (Period .)")
+            
+            col.separator()
+            col.separator()
+            col.label(text="OBJECT ORIGIN TOOLS:")
+            
+            col.label(text="Object Origin Placement Options:")
+            col.operator("object.origin_set", text="Origin to Center of Mass").type = 'ORIGIN_CENTER_OF_MASS'
+            col.operator("object.origin_set", text="Origin to Bounding Box Center").type = 'ORIGIN_CENTER_OF_VOLUME'
+            #col.operator("object.origin_set", text="Origin to Bottom of Object").type = 'ORIGIN_GEOMETRY'
+            col.operator("mesh.origin_to_bottom", text="Origin to Bottom of Object")
+            
+            col.separator()
+            col.separator()
+            col.label(text="INVERSE PAIRS:")
+            if scene.show_help_object_origin:   
+                col.label(text="These commands below are grouped by two way relationship")
+                col.separator()
+                
+            # Global Zero ↔ Object Origin
+            col.label(text="Object Origin ↔ World Zero:")
+            col.operator("mesh.origin_to_global_zero", text="Move Object Origin to World Zero")
+            col.enabled = not is_edit_mode
+           
+            col.separator()
+            col.separator() 
+            # Object Origin ↔ Object Geometry
+            col.label(text="Object Origin ↔ Object Geometry:")
+            col.operator("object.origin_set", text="Move Object Origin to Object Geometry").type = 'ORIGIN_GEOMETRY'
+            #col.enabled = not is_edit_mode
+            col.operator("object.origin_set", text="Move Object Geometry to Object Origin").type = 'GEOMETRY_ORIGIN'
+            
+            col.separator()
+            col.separator()   
+            # 3D Cursor ↔ Object Origin
+            col.label(text="3D Cursor ↔ Object Origin:")
+            col.operator("view3d.snap_cursor_to_selected", text="Move 3D Cursor to Object Origin")
+            col.operator("object.origin_set", text="Move Object Origin to 3D Cursor").type = 'ORIGIN_CURSOR'
+            
+            
+
+            col.separator()
+            col.separator()
 
         # 🧩 Object Mode
         box = layout.box()
         row = box.row()
-        row.prop(scene, "show_object_mode", text="Object Mode", emboss=False, icon='OBJECT_DATAMODE')
+        row.prop(scene, "show_object_mode", text="OBJECT MODE", emboss=False, icon='OBJECT_DATAMODE')
+        
+        row.prop(scene, "show_help_object_mode", text="", icon='HELP' if scene.show_help_object_mode else 'HIDE_ON', toggle=True)
+        
+        
         if scene.show_object_mode:
             col = box.column(align=True)
             
+            
+            # Selection status button
+            status_row = col.row()
+            if context.selected_objects:
+                status_row.alert = True
+                status_row.label(text="Objects Selected - Tools Active", icon='OBJECT_DATAMODE')
+            else:
+                status_row.label(text="No Objects Selected - Select Something First", icon='RESTRICT_SELECT_ON')
+    
+            
             # THE WHY - What is Object Mode?
-            col.label(text="Object Mode = Work with Whole Objects")
-            col.label(text="Move, copy, delete entire objects")
-            col.separator()
+            if scene.show_help_object_mode:
+                col.label(text="Object Mode = Work with Whole Objects")
+                col.label(text="Move, copy, delete, join, boolean entire objects")
+                col.separator()
             
+            col.label(text="VIEWING CONTROLS:")
+            col.label(text="Object Visibility:")              
+            col.operator("mesh.hide", text="Hide Selected (H)")
+            col.operator("mesh.reveal", text="Reveal Hidden (Alt + H)")
+            
+            col.separator()
+            col.separator()
+            # APPEARANCE
+            col.label(text="Object Preview:")
+            col.operator("object.shade_smooth", text="Object Shade Smooth")
+            if scene.show_help_object_mode:
+                col.label(text="• Smooth = Curved surfaces")
+            col.operator("object.shade_flat", text="Object Shade Flat")
+            if scene.show_help_object_mode:
+                col.label(text="• Flat = Angular surfaces")
+                
+            col.separator()
+            col.separator()
             # SELECTION (Most Basic)
-            col.label(text="Selection:")
+            col.label(text="Object Selection:")
             col.operator("object.select_all", text="Select All/Deselect All (A)")
-            col.label(text="• Click object to select")
-            col.label(text="• Shift+Click to select multiple")
-            col.separator()
+            if scene.show_help_object_mode:
+                col.label(text="• Click object to select")
+                col.label(text="• Shift+Click to select multiple")
+                col.separator()
+                
+                
+            col.operator("object.select_all", text="Select All/None (A)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Select All/None = Toggle all selection")
+                
+            if hasattr(bpy.ops.object, 'select_all'):
+                col.operator("object.select_all", text="Select Opposite (Ctrl + I)").action = 'INVERT'  
+            if scene.show_help_edit_mode:    
+                col.label(text="• Select Opposite = Invert current selection")
             
+            col.separator()
+            col.separator()
+            col.label(text="OBJECT TOOLS:")             
+            # ADVANCED
+            col.label(text="Transformations:")
+            col.operator("object.transform_apply", text="Apply Rotation and Scale (Ctrl + A)")
+            if scene.show_help_object_mode:
+                col.label(text="• Apply: Makes current size/rotation permanent")            
+            
+            
+            
+            col.separator()
+            col.separator()
             # BASIC OBJECT OPERATIONS
             col.label(text="Basic Operations:")
             col.operator("object.duplicate_move", text="Duplicate (Shift + D)")
+            if scene.show_help_object_mode:
+                col.label(text="• Duplicate: Creates copy you can move")
             col.operator("object.delete", text="Delete (X or Delete)")
-            col.label(text="• Duplicate: Creates copy you can move")
-            col.label(text="• Delete: Removes object completely")
-            col.separator()
+            if scene.show_help_object_mode:
+                col.label(text="• Delete: Removes object completely")
+                col.separator()
             
+            col.separator()
+            col.separator()
             # COMBINING OBJECTS
             col.label(text="Combine Objects:")
             col.operator("object.join", text="Join into One Object (Ctrl + J)")
-            col.label(text="• Select multiple objects first")
-            col.label(text="• Last selected becomes the result")
-            col.separator()
+            if scene.show_help_object_mode:
+                col.label(text="• Select multiple objects first")
+                col.label(text="• Last selected becomes the result")
+                col.separator()
             
+            col.separator()
+            col.separator()
             # ORGANIZATION
             col.label(text="Organization:")
             col.operator("object.move_to_collection", text="Move to Collection (M)")
             col.operator("object.hide_viewport", text="Hide Selected (H)")
             col.operator("object.hide_viewport_unselected", text="Unhide All (Alt + H)")
-            col.label(text="• Collections = Folders for objects")
-            col.separator()
+            if scene.show_help_object_mode:
+                col.label(text="• Collections = Folders for objects")
             
-            # APPEARANCE
-            col.label(text="Surface Appearance:")
-            col.operator("object.shade_smooth", text="Shade Smooth")
-            col.operator("object.shade_flat", text="Shade Flat")
-            col.label(text="• Smooth = Curved surfaces")
-            col.label(text="• Flat = Angular surfaces")
             col.separator()
+            col.separator()
+
             
-            # ADVANCED
-            col.label(text="Advanced:")
-            col.operator("object.transform_apply", text="Apply Transformations (Ctrl + A)")
-            col.operator("object.origin_set", text="Set Origin to Geometry").type = 'ORIGIN_GEOMETRY'
-            col.label(text="• Apply: Makes current size/rotation permanent")
-            col.label(text="• Origin: Center point for rotations")
+
 
         # 🧩 Edit Mode  
         box = layout.box()
         row = box.row()
-        row.prop(scene, "show_edit_mode", text="Edit Mode", emboss=False, icon='EDITMODE_HLT')
+        row.prop(scene, "show_edit_mode", text="EDIT MODE", emboss=False, icon='EDITMODE_HLT')
+        
+        row.prop(scene, "show_help_edit_mode", text="", icon='HELP' if scene.show_help_edit_mode else 'HIDE_ON', toggle=True)
+        
+        
         if scene.show_edit_mode:
             col = box.column(align=True)
             
+            # Selection status for Edit Mode
+            # Selection status for Edit Mode
+            # Selection status for Edit Mode
+            status_row = col.row()
+            obj = context.active_object
+            if obj and obj.mode == 'EDIT' and obj.type == 'MESH':
+                import bmesh
+                bm = bmesh.from_edit_mesh(obj.data)
+                
+                # Check what type of elements are selected
+                selected_verts = [v for v in bm.verts if v.select]
+                selected_edges = [e for e in bm.edges if e.select]  
+                selected_faces = [f for f in bm.faces if f.select]
+                
+                if selected_faces:
+                    status_row.alert = True
+                    status_row.label(text="Faces Selected - Tools Active", icon='FACESEL')
+                elif selected_edges:
+                    status_row.alert = True
+                    status_row.label(text="Edges Selected - Tools Active", icon='EDGESEL')
+                elif selected_verts:
+                    status_row.alert = True
+                    status_row.label(text="Vertices Selected - Tools Active", icon='VERTEXSEL')
+                else:
+                    status_row.label(text="No Elements Selected - Verts/Edges/Faces", icon='RESTRICT_SELECT_ON')
+            else:
+                status_row.label(text="Enter Edit Mode to Select Elements", icon='EDITMODE_HLT')
+    
+            
             # THE WHY - What is Edit Mode?
-            col.label(text="Edit Mode = Modify Object Shape")
-            col.label(text="Work with vertices, edges, faces")
-            col.label(text="Tab = Switch between Object/Edit Mode")
-            col.separator()
+            if scene.show_help_edit_mode:
+                col.label(text="Edit Mode = Modify Object Mesh")
+                col.label(text="Work with VERTICES, EDGES, FACES")
+                
+                col.separator()
             
-            # SELECTION MODES
-            col.label(text="Selection Modes:")
-            col.label(text="• 1 = Vertex mode (points)")
-            col.label(text="• 2 = Edge mode (lines)")  
-            col.label(text="• 3 = Face mode (surfaces)")
-            col.separator()
+                # SELECTION MODES
+                col.label(text="Selection Modes:")
+                col.label(text="KEY 1 = Vertex mode (points)")
+                col.label(text="KEY 2 = Edge mode (lines)")  
+                col.label(text="KEY 3 = Face mode (surfaces)")
+                col.separator()
             
-            # BASIC SELECTION
-            col.label(text="Selection:")
+            # Keep visibility controls at top
+            col.label(text="VIEWING CONTROLS:")
+            col.label(text="Mesh Visibility:")
+            col.operator("mesh.hide", text="Hide Selected (H)")
+            col.operator("mesh.reveal", text="Reveal Hidden (Alt + H)")
+            
+            col.separator()
+            col.separator()
+            col.label(text="Mesh Preview:")
+            col.operator("mesh.faces_shade_smooth", text="Mesh Shade Smooth (Ctrl + F)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Shade Smooth = Soft rounded shading")
+            col.operator("mesh.faces_shade_flat", text="Mesh Shade Flat (Ctrl + F)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Shade Flat = Hard angular shading")
+            
+            
+            col.separator()
+            col.separator()
+            # SELECTION
+            col.label(text="Mesh Selection:")
             col.operator("mesh.select_all", text="Select All/None (A)")
-            col.operator("mesh.select_linked", text="Select Connected (L)")
-            col.operator("mesh.select_inverse", text="Select Opposite (Ctrl + I)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Select All/None = Toggle all selection")
+                
+            if hasattr(bpy.ops.mesh, 'select_all'):
+                col.operator("mesh.select_all", text="Select Opposite (Ctrl + I)").action = 'INVERT'  
+            if scene.show_help_edit_mode:    
+                col.label(text="• Select Opposite = Invert current selection")
+            
             col.operator("mesh.select_more", text="Grow Selection (Ctrl + +)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Grow Selection = Expand selection area")
             col.operator("mesh.select_less", text="Shrink Selection (Ctrl + -)")
-            col.separator()
+            if scene.show_help_edit_mode:    
+                col.label(text="• Shrink Selection = Reduce selection area")
             
-            # ESSENTIAL MODELING TOOLS
-            col.label(text="Essential Tools:")
-            col.operator("mesh.extrude_region_move", text="Extrude (E)")
-            col.label(text="• Extrude = Pull out new geometry")
-            col.separator()
+            col.operator("mesh.select_linked", text="Select Linked (L)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Select Connected = Select all connected geometry")
             
-            col.operator("mesh.loopcut_slide", text="Loop Cut (Ctrl + R)")
-            col.label(text="• Loop Cut = Add edge ring around object")
             col.separator()
-            
-            col.operator("mesh.inset_faces", text="Inset Faces (I)")
-            col.label(text="• Inset = Create smaller face inside")
             col.separator()
+            # Correct coplanar selection
+            col.label(text="Select Similar - Shift + G")
+            #op = col.operator("mesh.select_similar", text="Select Similar - Coplanar (Shift + G)")
+            #op.type = 'COPLANAR'
+            #if scene.show_help_edit_mode:    
+            col.label(text="• Sub menu changes depending on vertice, edge or face selected")
             
-            col.operator("mesh.bevel", text="Bevel (Ctrl + B)")
-            col.label(text="• Bevel = Round off sharp edges")
+            
+            
+            
+            
             col.separator()
-            
-            # ADVANCED EXTRUDE OPTIONS
-            col.label(text="Extrude Options (Alt + E):")
-            col.operator("mesh.extrude_faces_move", text="Extrude Faces")
-            col.operator("mesh.extrude_edges_move", text="Extrude Edges") 
-            col.operator("mesh.extrude_vertices_move", text="Extrude Vertices")
             col.separator()
-            
-            # MESH CLEANUP
+            col.label(text="EDITING TOOLS:")
+            if scene.show_help_edit_mode: 
+                col.label(text="Right click on the object to see the tool menu")
+                col.separator()
+            # CLEANUP
             col.label(text="Cleanup:")
+            col.operator("mesh.beautify_fill", text="Beautify Faces (Ctrl + F)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Beautify = Improve face topology")
+            col.operator("mesh.delete_loose", text="Delete Loose Geometry")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Delete Loose = Remove unconnected vertices/edges")
             col.operator("mesh.merge", text="Merge Vertices (M)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Merge = Merge vertices into one")
+            col.operator("mesh.tris_convert_to_quads", text="Tris to Quads (Alt + J)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Tris to Quads = Convert triangles to quads")
             col.operator("mesh.remove_doubles", text="Remove Duplicates")
-            col.operator("mesh.fill", text="Fill Holes (F)")
-            col.label(text="• Merge = Combine nearby vertices")
-            col.label(text="• Fill = Close gaps in mesh")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Remove Duplicates = Remove duplicate vertices")
+            
+            col.separator()
+            col.separator()
+            # DISSOLVE
+            col.label(text="Dissolve:")
+            col.operator("mesh.dissolve_verts", text="Dissolve Vertices")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Dissolve Vertices = Remove vertices, keep connections")
+            
+            col.operator("mesh.dissolve_edges", text="Dissolve Edges")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Dissolve Edges = Remove edges, keep faces")
+            col.operator("mesh.dissolve_faces", text="Dissolve Faces")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Dissolve Faces = Remove faces, keep edges")
+            col.operator("mesh.dissolve_limited", text="Limited Dissolve")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Limited Dissolve = Remove unnecessary edges/faces")
+            
+            col.separator()
+            col.separator()
+            # DUPLICATION
+            col.label(text="Duplication:")
+            col.operator("mesh.duplicate_move", text="Duplicate (Shift+D)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Duplicate = Copy selected geometry")
+            
+            col.separator()
+            col.separator()
+            # EDGE TOOLS
+            col.label(text="Edge Tools:")
+            col.operator("mesh.bevel", text="Bevel Edges/Vertices (Ctrl+B)")
+            if scene.show_help_edit_mode:
+                col.label(text="• Bevel = Add bevel or chamfer (mouse wheel)")
+            col.operator("mesh.bridge_edge_loops", text="Bridge Edge Loops (Ctrl + E)")
+            if scene.show_help_edit_mode:
+                col.label(text="• Bridge = Connect two edge loops with faces")
+            if hasattr(bpy.ops.mesh, 'loopcut_slide'):
+                col.operator("mesh.loopcut_slide", text="Loop Cut (Ctrl + R)")
+                if scene.show_help_edit_mode:    
+                    col.label(text="• Loop Cut = Add edge ring around object")
+            col.operator("mesh.mark_seam", text="Mark Seam (Ctrl + E)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Mark Seam = Mark edges for UV unwrapping")
+            col.operator("mesh.mark_sharp", text="Mark Sharp (Ctrl + E)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Mark Sharp = Mark edges for hard shading")
+            col.operator("mesh.rip_edge", text="Rip Edge (Alt + V)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Rip Edge = Split edge into two")
+            col.operator("mesh.subdivide", text="Subdivide Edges (RMB > S)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Subdivide = Add cuts to increase edge density")
+            col.separator()
+            col.label(text="• Edge Slide along face (gg)")
+            
+            col.separator()
+            col.separator()
+            # EXTRUDE
+            col.label(text="Extrude:")
+            col.operator("mesh.extrude_region_move", text="Extrude (E)")
+            if scene.show_help_edit_mode:
+                col.label(text="• Extrude = Pull out new geometry")
+            col.operator("mesh.extrude_vertices_move", text="Extrude Vertices (E)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Extrude Vertices = Pull out new vertices")
+            col.operator("mesh.extrude_edges_move", text="Extrude Edges (E)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Extrude Edges = Pull out new edges")
+            col.operator("mesh.extrude_faces_move", text="Extrude Faces (E)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Extrude Faces = Pull out new faces")
+            
+            col.operator("mesh.inset", text="Inset Faces (I)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Inset = Push in new geometry")
+            col.separator()
+            col.label(text="• Extrude Advanced (Alt + E):")
+            if scene.show_help_edit_mode:
+                col.label(text="Example:")
+                col.label(text="Extrude Normal (Alt + E) > Extrude faces along Normals:")
+            
+            col.separator()
+            col.separator()
+            # FACE TOOLS
+            col.label(text="Face Tools:")
+            col.operator("mesh.fill", text="Fill Faces/Holes (F)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Fill = Fill holes with new faces")
+            col.operator("mesh.fill_grid", text="Fill with Grid (Ctrl + F)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Fill Grid = Fill empty area with quad grid")
+            
+            col.separator()
             col.separator()
             
-            # ADVANCED OPERATIONS
-            col.label(text="Advanced:")
-            col.operator("mesh.rip_vertices", text="Rip Vertices (V)")
-            col.operator("mesh.shrink_fatten", text="Shrink/Fatten (Alt + S)")
+            
+            # KNIFE
+            col.label(text="Knife:")
+            col.operator("mesh.knife_tool", text="Knife Tool (K)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Knife = Cut custom lines through mesh")
+            
+            col.separator()
+            col.separator()
+            
+            # MODIFIERS
+            col.label(text="Modifiers:")
+            col.label(text="• Create Modifier - Ctrl + (keypad 1, 2, 3)")
+            col.label(text="• Creates a new Modifier set to level 1, 2, 3 ")
+            
+            op = col.operator("object.subdivision_set", text="Create Level 1 Modifier (Ctrl + 1)")
+            op.level = 1
+            op.relative = False
+            if scene.show_help_edit_mode:    
+                col.label(text="• Create Modifier = Level 1")
+            
+            col.operator("object.subdivision_set", text="Create Level 2 Modifier (Ctrl + 2)")
+            op.level = 2
+            op.relative = False
+            if scene.show_help_edit_mode:    
+                col.label(text="• Create Modifier = Level 2")
+            
+            col.operator("object.subdivision_set", text="Create Level 3 Modifier (Ctrl + 3)")
+            op.level = 3
+            op.relative = False
+            if scene.show_help_edit_mode:    
+                col.label(text="• Create Modifier = Level 3")
+            
+            col.operator("object.make_links_data", text="Copy Modifiers - from > to (Ctrl + L)").type='MODIFIERS'
+            if scene.show_help_edit_mode:    
+                col.label(text="• Copy Modifiers = from (1st selection) to (shift click 2nd selection")
+            
+            col.separator()
+            col.separator()
+            # SPLIT & SEPARATE
+            col.label(text="Split & Separate:")
+            col.operator("mesh.rip", text="Rip Vertices (V)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Rip = Split vertex into two")
             col.operator("mesh.separate", text="Separate Parts (P)")
-            col.label(text="• Rip = Split vertices apart")
-            col.label(text="• Shrink/Fatten = Move along normals")
-            col.label(text="• Separate = Break into separate objects")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Separate = Break into separate objects")
+            col.operator("mesh.split", text="Split Geometry (Y)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Split = Separate vertices while keeping position")
+            
+            col.separator()
+            col.separator()
+            # TRANSFORM
+            col.label(text="Transform:")
+            if hasattr(bpy.ops.transform, 'shrink_fatten'):
+                col.operator("transform.shrink_fatten", text="Shrink/Fatten (Alt + S)")
+                if scene.show_help_edit_mode:    
+                    col.label(text="• Shrink/Fatten = Move along surface normals")
+            
+            col.separator()
+            col.separator()
+
+
+
             
         # 🧩 Camera
         box = layout.box()
         row = box.row()
-        row.prop(scene, "show_camera", text="Camera", emboss=False, icon='CAMERA_DATA')
+        row.prop(scene, "show_camera", text="CAMERA", emboss=False, icon='CAMERA_DATA')
+        
+        row.prop(scene, "show_help_camera", text="", icon='HELP' if scene.show_help_camera else 'HIDE_ON', toggle=True)
+        
+        
         if scene.show_camera:
             col = box.column(align=True)
             
-            # THE WHY - What is a Camera?
-            col.label(text="Camera = What Will Be Rendered")
-            col.label(text="Every scene needs a camera to create final images")
+            # CAMERA LOCK (Advanced but Important)
+            col.label(text="Camera Lock:")
+            if hasattr(context.space_data, 'lock_camera'):
+                col.prop(context.space_data, "lock_camera", text="Lock Camera to View")
+                if scene.show_help_camera:
+                    col.label(text="• When locked: Moving view = moving camera")
+                    col.label(text="• When unlocked: Camera stays put")
+            
             col.separator()
+            col.separator()
+            # THE WHY - What is a Camera?
+            if scene.show_help_camera:
+                col.label(text="Camera = What Will Be Rendered")
+                col.label(text="Every scene needs a camera to create final images")
+                col.separator()
             
             # CAMERA STATUS CHECK
             if context.scene.camera:
@@ -522,48 +1099,55 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                 col.separator()
                 pass  # Don't show other options if no camera
             
+            col.separator()
+            col.separator()
             # CAMERA VIEWING
             col.label(text="Camera View:")
             col.operator("view3d.view_camera", text="Look Through Camera (Numpad 0)")
-            col.label(text="• See exactly what will be rendered")
-            col.separator()
+            if scene.show_help_camera:
+                col.label(text="• See exactly what will be rendered")
+                col.separator()
             
+            col.separator()
+            col.separator()
             # CAMERA POSITIONING
             col.label(text="Position Camera:")
             col.operator("view3d.camera_to_view", text="Move Camera to Current View (Ctrl + Alt + Numpad 0)")
-            col.label(text="• First: Navigate to desired view")
-            col.label(text="• Then: Use this to position camera there")
-            col.separator()
+            if scene.show_help_camera:
+                col.label(text="• First: Navigate to desired view")
+                col.label(text="• Then: Use this to position camera there")
+                col.separator()
             
-            # CAMERA LOCK (Advanced but Important)
-            col.label(text="Camera Lock:")
-            if hasattr(context.space_data, 'lock_camera'):
-                col.prop(context.space_data, "lock_camera", text="Lock Camera to View")
-                col.label(text="• When locked: Moving view = moving camera")
-                col.label(text="• When unlocked: Camera stays put")
             col.separator()
-            
+            col.separator()
             # CAMERA PROPERTIES
             col.label(text="Camera Settings:")
             if context.scene.camera and context.scene.camera.data:
                 camera_data = context.scene.camera.data
                 col.prop(camera_data, "lens", text="Focal Length (mm)")
-                col.label(text="• Lower = Wider view (18mm = very wide)")
-                col.label(text="• Higher = Narrower view (85mm = portrait)")
-                col.separator()
+                if scene.show_help_camera:
+                    col.label(text="• Lower = Wider view (18mm = very wide)")
+                    col.label(text="• Higher = Narrower view (85mm = portrait)")
+                    col.separator()
                 
+                col.separator()
+                col.separator()
                 # Depth of Field toggle
                 col.prop(camera_data.dof, "use_dof", text="Depth of Field (Blur)")
                 if camera_data.dof.use_dof:
                     col.prop(camera_data.dof, "aperture_fstop", text="F-Stop (Blur Amount)")
                     col.prop(camera_data.dof, "focus_distance", text="Focus Distance")
             
-            # CAMERA SELECTION
             col.separator()
+            col.separator()
+            # CAMERA SELECTION
             col.label(text="Camera Object:")
             col.operator("object.select_camera", text="Select Camera Object")
-            col.label(text="• Select to move/rotate like any object")
+            if scene.show_help_camera:
+                col.label(text="• Select to move/rotate like any object")
             
+            col.separator()
+            col.separator()
             # MULTIPLE CAMERAS
             cameras_in_scene = [obj for obj in context.scene.objects if obj.type == 'CAMERA']
             if len(cameras_in_scene) > 1:
@@ -576,57 +1160,74 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             else:
                 col.separator()
                 col.operator("object.camera_add", text="Add Another Camera")
-                col.label(text="• Use multiple cameras for different shots")            
+                if scene.show_help_camera:
+                    col.label(text="• Use multiple cameras for different shots")            
+
+            col.separator()
+            col.separator()
 
         # 🧩 Render
         box = layout.box()
         row = box.row()
-        row.prop(scene, "show_render", text="Render", emboss=False, icon='RENDER_STILL')
+        row.prop(scene, "show_render", text="RENDER", emboss=False, icon='RENDER_STILL')
+        
+        row.prop(scene, "show_help_render", text="", icon='HELP' if scene.show_help_render else 'HIDE_ON', toggle=True)
+        
         if scene.show_render:
             col = box.column(align=True)
             
             # THE WHY - What is Rendering?
-            col.label(text="Render = Create Final Image/Video")
-            col.label(text="Converts 3D scene into 2D picture")
-            col.separator()
+            if scene.show_help_render:
+                col.label(text="Render = Create Final Image/Video")
+                col.label(text="Converts 3D scene into 2D picture")
+                col.separator()
             
             # RENDER ENGINE
             col.label(text="Render Engine:")
             col.prop(context.scene.render, "engine", text="")
             if context.scene.render.engine == 'BLENDER_EEVEE':
-                col.label(text="• Eevee = Fast, good for previews")
+                if scene.show_help_render:
+                    col.label(text="• Eevee = Fast, good for previews")
             elif context.scene.render.engine == 'CYCLES':
-                col.label(text="• Cycles = Slow, photorealistic")
+                if scene.show_help_render:
+                    col.label(text="• Cycles = Slow, photorealistic")
             elif context.scene.render.engine == 'BLENDER_WORKBENCH':
-                col.label(text="• Workbench = Very fast, simple")
-            col.separator()
+                if scene.show_help_render:
+                    col.label(text="• Workbench = Very fast, simple")
             
+            col.separator()
+            col.separator()
             # RENDER ACTIONS
             col.label(text="Render Actions:")
             col.operator("render.render", text="Render Image (F12)")
             col.operator("render.view_show", text="View Last Render (F11)")
-            col.separator()
             
+            col.separator()
+            col.separator()
             # ANIMATION
             col.label(text="Animation:")
             col.operator("render.render", text="Render Animation (Ctrl + F12)").animation = True
             col.operator("render.play_rendered_anim", text="Play Rendered Animation")
-            col.separator()
             
+            col.separator()
+            col.separator()
             # OUTPUT SETTINGS
             col.label(text="Output Settings:")
             col.prop(context.scene.render, "resolution_x", text="Width")
             col.prop(context.scene.render, "resolution_y", text="Height")
             col.prop(context.scene.render, "resolution_percentage", text="Quality %")
-            col.label(text="• 100% = Full quality, 50% = Half size")
-            col.separator()
+            if scene.shortcuts_show_help:
+                col.label(text="• 100% = Full quality, 50% = Half size")
             
+            col.separator()
+            col.separator()
             # FILE FORMAT
             col.label(text="File Format:")
             col.prop(context.scene.render.image_settings, "file_format", text="")
             col.prop(context.scene.render, "filepath", text="Save Location")
-            col.separator()
             
+            col.separator()
+            col.separator()
             # SAMPLING (For Cycles/Eevee)
             if context.scene.render.engine in ['CYCLES', 'BLENDER_EEVEE']:
                 col.label(text="Quality Settings:")
@@ -635,28 +1236,34 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                     col.label(text="• More samples = Better quality + Slower")
                 elif context.scene.render.engine == 'BLENDER_EEVEE':
                     col.prop(context.scene.eevee, "taa_render_samples", text="Samples")
-                col.separator()
             
+            col.separator()
+            col.separator()
             # VIEWPORT RENDER
             col.label(text="Quick Preview:")
             col.operator("render.opengl", text="Viewport Render (Current View)")
-            col.label(text="• Fast render of current viewport")
-            col.separator()
+            if scene.shortcuts_show_help:
+                col.label(text="• Fast render of current viewport")
             
+            col.separator()
+            col.separator()
             # RENDER REGION
             col.label(text="Partial Render:")
             col.operator("view3d.render_border", text="Set Render Border (Ctrl + B)")
             col.prop(context.scene.render, "use_border", text="Use Border")
-            col.label(text="• Render only part of image (faster testing)")
-            col.separator()
+            if scene.show_help_render:
+                col.label(text="• Render only part of image (faster testing)")
             
+            col.separator()
+            col.separator()
             # COMMON ISSUES
             col.label(text="Common Issues:")
             col.label(text="• Black render = No lights in scene")
             col.label(text="• Noisy render = Increase samples")
             col.label(text="• Slow render = Lower samples/resolution")
-            col.separator()
             
+            col.separator()
+            col.separator()
             # LIGHTING CHECK
             lights_in_scene = [obj for obj in context.scene.objects if obj.type == 'LIGHT']
             if not lights_in_scene and context.scene.render.engine != 'BLENDER_WORKBENCH':
@@ -665,6 +1272,8 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             else:
                 col.label(text=f"✓ {len(lights_in_scene)} Light(s) in Scene")
             
+            col.separator()
+            col.separator()
             # MATERIAL CHECK
             if context.active_object and context.active_object.type == 'MESH':
                 if not context.active_object.material_slots:
@@ -673,10 +1282,17 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                 else:
                     col.label(text="✓ Materials Present")
             
+            col.separator()
+            col.separator()
+            
+            
         # 🧩 About
         box = layout.box()
         row = box.row()
-        row.prop(scene, "show_about", text="About", emboss=False, icon='INFO')
+        row.prop(scene, "show_about", text="ABOUT", emboss=False, icon='INFO')
+        
+        row.prop(scene, "show_help_about", text="", icon='HELP' if scene.show_help_about else 'HIDE_ON', toggle=True)
+        
         if scene.show_about:
             col = box.column(align=True)
             
@@ -688,7 +1304,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             header_col.label(text="Making Blender Accessible for Everyone")
             
             col.separator()
-            
+            col.separator()
             # MISSION STATEMENT
             mission_box = col.box()
             mission_col = mission_box.column(align=True)
@@ -700,7 +1316,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             mission_col.label(text="• Expose hidden keyboard shortcuts")
             
             col.separator()
-            
+            col.separator()
             # VERSION INFO
             version_box = col.box()
             version_col = version_box.column(align=True)
@@ -711,7 +1327,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             version_col.label(text="• Regular updates for LTS versions")
             
             col.separator()
-            
+            col.separator()
             # DEVELOPER INFO
             dev_box = col.box()
             dev_col = dev_box.column(align=True)
@@ -729,7 +1345,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                               icon='FILE_TEXT').url = "mailto:deaddogdown.gamestudio@gmail.com"
             
             col.separator()
-            
+            col.separator()
             # SUPPORT SECTION
             support_box = col.box()
             support_col = support_box.column(align=True)
@@ -747,7 +1363,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                                 icon='HEART').url = "mailto:deaddogdown.gamestudio@gmail.com?subject=Sponsorship"
             
             col.separator()
-            
+            col.separator()
             # INSPIRATIONAL FOOTER
             footer_box = col.box()
             footer_col = footer_box.column(align=True)
@@ -756,12 +1372,15 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             footer_col.label(text="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
             footer_col.label(text="Making complex software simple, one tool at a time.")
             
-            # VERSION/BUILD INFO (Optional)
             col.separator()
+            col.separator()
+            # VERSION/BUILD INFO (Optional)
             info_col = col.column(align=True)
             info_col.scale_y = 0.7
             info_col.label(text="Build: v1.0 | License: GPLv2 | Community Driven")
             
+            col.separator()
+            col.separator()
 
 class SHORTCUTS_OT_ObjectMode(bpy.types.Operator):
     bl_idname = "object.switch_to_object_mode"
@@ -786,12 +1405,24 @@ class SHORTCUTS_OT_EditMode(bpy.types.Operator):
 
 classes = (
     SHORTCUTS_PT_Panel,
+    SHORTCUTS_OT_SetUnits,
     SHORTCUTS_OT_ObjectMode,
     SHORTCUTS_OT_EditMode,
     OBJECT_OT_reset_transforms,
+    MESH_OT_smart_snap_vertex,
+    MESH_OT_smart_snap_edge,
+    MESH_OT_smart_snap_face,
+    MESH_OT_smart_snap,
 )
 
 def register():
+    # Add the help toggle property to the scene FIRST
+    bpy.types.Scene.shortcuts_show_help = BoolProperty(
+        name="Show Help Text",
+        description="Show or hide helpful descriptions for beginners",
+        default=True  # Default to showing help for new users
+    )
+    
     register_properties()
     for cls in classes:
         bpy.utils.register_class(cls)
@@ -799,6 +1430,10 @@ def register():
 def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
+        
+    # Remove the property when unregistering
+    if hasattr(bpy.types.Scene, 'shortcuts_show_help'):
+        del bpy.types.Scene.shortcuts_show_help    
     unregister_properties()
 
 if __name__ == "__main__":
