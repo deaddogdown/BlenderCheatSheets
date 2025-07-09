@@ -10,6 +10,8 @@ A simple and intuitive toolbar designed to help **Blender modellers of all skill
 - Lists common keyboard, mouse, and numpad shortcuts
 - Provides explicit button alternatives for all common commands
 - Designed for clarity and accessibility
+- Commands grouped first by category, then core usage patterns and alpha sorting to find common commands easily
+- Shorcuts keys listed with every command where possible. Otherwise just click the button
 - Reduces cognitive load of trying to remember a zillion commands and forgetting what a shortcut was
 - Helps you spend more time creating and less time debugging because the steps always break
 - Keeps you in the creative flow - Mega Bonus!
