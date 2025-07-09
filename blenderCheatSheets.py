@@ -288,35 +288,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                     col.label(text="• Imperial: Feet, inches, etc.")
                     col.label(text="• Common in USA architecture/design")
             
-            col.separator()
-            col.separator()
-            col.operator("object.transform_apply", text="Apply Transforms - Rotation and Scale (Ctrl + A)")
-            if scene.show_help_general:
-                col.label(text="• Apply Transforms: Makes current rotation/scale permanent")
-                col.label(text="• Used after Rotation and Scaling")
             
-            col.separator()
-            col.separator()
-            col.label(text="Reset Selected Transforms:")    
-            
-            # New section: Reset Rotation & Reset Scale
-            row = col.row()  # Create a new row for the reset buttons
-            
-            # Reset Rotation
-            sub_row = row.row()
-            sub_row.operator("object.rotation_clear", text="Reset Rotation (Alt + R)").clear_delta = False
-            
-            # Reset Scale
-            sub_row = row.row()
-            sub_row.operator("object.scale_clear", text="Reset Scale (Alt + S)").clear_delta = False           
-            col.separator()
-            # Combined Reset Button
-            col.operator("object.reset_transforms", text="Reset Rotation & Scale")
-            
-            if scene.show_help_general:
-                col.label(text="• Reset Rotation: Straightens object")
-                col.label(text="• Reset Scale: Returns to original size")
-                col.label(text="• Undo Transforms: Removes current rotation/scale")
             col.separator()
             col.separator()
         
@@ -669,7 +641,6 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         if scene.show_object_mode:
             col = box.column(align=True)
             
-            
             # Selection status button
             status_row = col.row()
             if context.selected_objects:
@@ -677,18 +648,51 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                 status_row.label(text="Objects Selected - Tools Active", icon='OBJECT_DATAMODE')
             else:
                 status_row.label(text="No Objects Selected - Select Something First", icon='RESTRICT_SELECT_ON')
-    
             
             # THE WHY - What is Object Mode?
             if scene.show_help_object_mode:
                 col.label(text="Object Mode = Work with Whole Objects")
                 col.label(text="Move, copy, delete, join, boolean entire objects")
-                col.separator()
+                col.separator()            
+                
+            col.separator()
+            col.separator()
+            col.label(text="Apply Selected Transforms:")  
+            col.operator("object.transform_apply", text="Apply Transforms - Rotation and Scale (Ctrl + A)")
+            if scene.show_help_general:
+                col.label(text="• Apply Transforms: Makes current rotation/scale permanent")
+                col.label(text="• Used after Rotation and Scaling")
             
+            
+            col.separator()
+            col.label(text="Reset Selected Transforms:")    
+            
+            # New section: Reset Rotation & Reset Scale
+            row = col.row()  # Create a new row for the reset buttons
+            
+            # Reset Rotation
+            sub_row = row.row()
+            sub_row.operator("object.rotation_clear", text="Reset Rotation (Alt + R)").clear_delta = False
+            
+            # Reset Scale
+            sub_row = row.row()
+            sub_row.operator("object.scale_clear", text="Reset Scale (Alt + S)").clear_delta = False           
+            col.separator()
+            # Combined Reset Button
+            col.operator("object.reset_transforms", text="Reset Rotation & Scale")
+            
+            if scene.show_help_general:
+                col.label(text="• Reset Rotation: Straightens object")
+                col.label(text="• Reset Scale: Returns to original size")
+                col.label(text="• Undo Transforms: Removes current rotation/scale")
+            
+       
+            col.separator()
+            col.separator()
             col.label(text="VIEWING CONTROLS:")
             col.label(text="Object Visibility:")              
-            col.operator("mesh.hide", text="Hide Selected (H)")
-            col.operator("mesh.reveal", text="Reveal Hidden (Alt + H)")
+            col.operator("object.hide_view_set", text="Hide Selected (H)")
+            col.operator("object.hide_view_clear", text="Reveal Hidden (Alt + H)")
             
             col.separator()
             col.separator()
