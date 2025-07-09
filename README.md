@@ -87,7 +87,7 @@ You are free to:
 - ✅ Share it
 
 With the condition that:
-- 🔁 Any derivative work must also remain open source under the same license and give credit to "Dead Dog Down Game Studio".
+- 🔁 Any derivative work must also remain open source under the same license and give credit to "Dead Dog Down Game Studio" and provide a link back to this github page via github.com/@deaddogdown
 
 See the [LICENSE](LICENSE) file for full terms.
 
