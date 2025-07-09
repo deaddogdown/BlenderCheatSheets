@@ -21,7 +21,7 @@ A simple and intuitive toolbar designed to help **Blender modellers of all skill
 ## Message from an old Granny
 I used to spend 40% of my time debugging why a sequence of commands didn't work and only 60% of my time actually modelling 3d stuff.
 When I started use BlenderCheatSheets, I could feel the immediate flip. It's like someone turned a light on in a darkened room.
-Now I am actually doing 3d modelling and getting 3d stuff done. No 3d debugging... Yay!
+Now I am actually doing 3d modelling and getting 3d stuff done. Much much less 3d debugging... Yay!
 
 ## 🖼️ Preview
 
