@@ -1,6 +1,6 @@
 # Blender CheatSheets
 
-A simple and intuitive toolbar designed to help **Blender modellers of all skill levels** access common tools and shortcuts quickly and easily.
+A simple and intuitive toolbar designed to help **Blender Creators of all skill levels** access common tools and shortcuts quickly and easily.
 
 ## 🧰 Features
 
