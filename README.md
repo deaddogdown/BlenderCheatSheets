@@ -4,6 +4,7 @@ A simple and intuitive toolbar designed to help **Blender modellers of all skill
 
 ## 🧰 Features
 
+- You choose whether you want to use Buttons or Shortcuts
 - Provides a comprehensive cheatsheet panel inside Blenders 3d view
 - Clean friendly UI panel inside Blender for users of any skill level, especially newbies and intermediates
 - Consistency in 3d Language concepts
