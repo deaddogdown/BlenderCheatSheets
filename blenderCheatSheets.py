@@ -787,15 +787,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.separator()
             col.separator()
             col.label(text="OBJECT TOOLS:")             
-            # ADVANCED
-            col.label(text="Transformations:")
-            col.operator("object.transform_apply", text="Apply Rotation and Scale (Ctrl + A)")
-            if scene.show_help_object_mode:
-                col.label(text="• Apply: Makes current size/rotation permanent")            
-            
-            
-            
-            col.separator()
+        
             col.separator()
             # BASIC OBJECT OPERATIONS
             col.label(text="Basic Operations:")
@@ -1031,25 +1023,25 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.operator("mesh.tris_convert_to_quads", text="Tris to Quads (Alt + J)")
             if scene.show_help_edit_mode:    
                 col.label(text="• Tris to Quads = Convert triangles to quads")
-            col.operator("mesh.remove_doubles", text="Remove Duplicates")
+            col.operator("mesh.remove_doubles", text="Remove Duplicates (M)")
             if scene.show_help_edit_mode:    
-                col.label(text="• Remove Duplicates = Remove duplicate vertices")
+                col.label(text="• Merge: By Distance = Remove duplicate vertices")
             
             col.separator()
             col.separator()
             # DISSOLVE
             col.label(text="Dissolve:")
-            col.operator("mesh.dissolve_verts", text="Dissolve Vertices")
+            col.operator("mesh.dissolve_verts", text="Dissolve Vertices (X)")
             if scene.show_help_edit_mode:    
                 col.label(text="• Dissolve Vertices = Remove vertices, keep connections")
             
-            col.operator("mesh.dissolve_edges", text="Dissolve Edges")
+            col.operator("mesh.dissolve_edges", text="Dissolve Edges (X)")
             if scene.show_help_edit_mode:    
                 col.label(text="• Dissolve Edges = Remove edges, keep faces")
-            col.operator("mesh.dissolve_faces", text="Dissolve Faces")
+            col.operator("mesh.dissolve_faces", text="Dissolve Faces (X)")
             if scene.show_help_edit_mode:    
                 col.label(text="• Dissolve Faces = Remove faces, keep edges")
-            col.operator("mesh.dissolve_limited", text="Limited Dissolve")
+            col.operator("mesh.dissolve_limited", text="Limited Dissolve (X)")
             if scene.show_help_edit_mode:    
                 col.label(text="• Limited Dissolve = Remove unnecessary edges/faces")
             
@@ -1084,10 +1076,10 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.operator("mesh.rip_edge", text="Rip Edge (Alt + V)")
             if scene.show_help_edit_mode:    
                 col.label(text="• Rip Edge = Split edge into two")
-            col.operator("mesh.subdivide", text="Subdivide Edges (RMB > S)")
+            col.operator("mesh.subdivide", text="Subdivide Edges (Ctrl + E)(RMB > S)")
             if scene.show_help_edit_mode:    
                 col.label(text="• Subdivide = Add cuts to increase edge density")
-            col.operator("mesh.unsubdivide", text="Unsubdivide (RMB > S)")
+            col.operator("mesh.unsubdivide", text="Unsubdivide (Ctrl + E)")
             if scene.show_help_edit_mode:    
                 col.label(text="• Quick Unsubdivide")
             col.separator()
