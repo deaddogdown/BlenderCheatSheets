@@ -70,7 +70,7 @@ Transparent and easily accessible even for Newbies, with standard terminology an
 
 Blender CheatSheets is free for life. If you'd like to support us so we can keep this addon up-to-date, please feel free to donate, sponsor, and help fund this addon.
 
-Blender CheatSheets will only be compatible with LTS versions.
+Blender CheatSheets will focus on full compatibility with LTS versions for production usage cases. We will not be following alpha, beta or rc releases, since these are still unpolished versions that we do not wish to break our workflow during production.
 
 Enjoy using Blender with new eyes!
 
