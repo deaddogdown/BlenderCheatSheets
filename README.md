@@ -88,8 +88,6 @@ This addon is licensed under the **GNU General Public License v2.0** — same as
 
 You are free to:
 - ✅ Use it
-- ✅ Study it
-- ✅ Modify it
 - ✅ Share it
 
 With the condition that:
