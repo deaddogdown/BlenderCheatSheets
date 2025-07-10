@@ -66,7 +66,7 @@ It will probably work on your version of Blender that is a non-LTS, so give it a
 
 Welcome to Blender CheatSheets
 
-This tool was designed to help modellers of all age ranges see and access Blender’s common functions in an easy-to-use toolbar.
+This tool was designed to help 3D Creators of all ages see and access Blender’s common functions in an easy-to-use toolbar.
 Transparent and easily accessible even for Newbies, with standard terminology and accessibility to the most common keyboard, mouse, and numpad controls.
 
 Blender CheatSheets is free for life. If you'd like to support us so we can keep this addon up-to-date, please feel free to donate, sponsor, and help fund this addon.
