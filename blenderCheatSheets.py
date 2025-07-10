@@ -12,9 +12,10 @@ def register_properties():
         ('show_general', False),
         ('show_viewport', False),
         ('show_transform', False),
+        ('show_cursor', False),
         ('show_world_origin', False),
         ('show_object_origin', False),
-        ('show_cursor', False),
+        ('show_primitives', False),
         ('show_object_mode', False),
         ('show_edit_mode', False),
         ('show_camera', False),        
@@ -25,9 +26,10 @@ def register_properties():
         ('show_help_general', False),
         ('show_help_viewport', False),
         ('show_help_transform', False),
+        ('show_help_cursor', False),
         ('show_help_world_origin', False),
         ('show_help_object_origin', False),
-        ('show_help_cursor', False),
+        ('show_help_primitives', False),
         ('show_help_object_mode', False),
         ('show_help_edit_mode', False),
         ('show_help_camera', False),
@@ -47,9 +49,10 @@ def unregister_properties():
         'show_general',
         'show_viewport',
         'show_transform',
+        'show_cursor',
         'show_world_origin',
         'show_object_origin',
-        'show_cursor',
+        'show_primitives',
         'show_object_mode',
         'show_edit_mode',
         'show_camera',        
@@ -60,9 +63,10 @@ def unregister_properties():
         'show_help_general',
         'show_help_viewport',
         'show_help_transform',
+        'show_help_cursor',
         'show_help_world_origin',
         'show_help_object_origin',
-        'show_help_cursor',
+        'show_help_primitives',
         'show_help_object_mode',
         'show_help_edit_mode',
         'show_help_camera',
@@ -294,8 +298,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         
             col.label(text="Useful Commands:")    
             col.operator("wm.search_menu", text="Search Operators: F3 or Spacebar")
-            col.operator("object.duplicate_move", text="Duplicate: Shift + D")
-            col.operator("object.make_single_user", text="Make Unique: U")
+            
             
             # Info labels for shortcuts that don't need operators:
             col.separator()
@@ -347,6 +350,9 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.operator("view3d.view_all", text="Frame All Objects (Home)")
             col.operator("view3d.view_selected", text="Frame Selected (Numpad .)")
             col.operator("view3d.snap_cursor_to_center", text="Reset View Focus (Shift + C)")
+            col.operator("wm.context_toggle", text="Wireframe Overlay Toggle", icon='SHADING_WIRE').data_path = "space_data.overlay.show_wireframes"
+            col.operator("wm.context_toggle", text="X-Ray Mode Toggle (Edit mode)", icon='XRAY').data_path = "space_data.shading.show_xray"
+            
             
             col.separator()
             col.separator()
@@ -388,7 +394,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         # 🧩 Transform and Manipulation
         box = layout.box()
         row = box.row()
-        row.prop(scene, "show_transform", text="TRANSFORM and MANIPULATION", emboss=False, icon='ORIENTATION_GIMBAL')
+        row.prop(scene, "show_transform", text="TRANSFORM", emboss=False, icon='ORIENTATION_GIMBAL')
         
         row.prop(scene, "show_help_transform", text="", icon='HELP' if scene.show_help_transform else 'HIDE_ON', toggle=True)
         
@@ -629,7 +635,60 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
 
             col.separator()
             col.separator()
+        
+        
+        # 🧩 Primitives
+        box = layout.box()
+        row = box.row()
+        row.prop(scene, "show_primitives", text="PRIMITIVES", emboss=False, icon='MESH_CUBE')
 
+        row.prop(scene, "show_help_primitives", text="", icon='HELP' if scene.show_help_primitives else 'HIDE_ON', toggle=True)
+
+        if scene.show_primitives:
+            col = box.column(align=True)
+            
+            if scene.show_help_primitives:
+                col.label(text="Basic shapes to start modeling with:")
+                col.separator()
+            
+            # Basic primitives
+            col.operator("mesh.primitive_plane_add", text="Plane", icon='MESH_PLANE')
+            if scene.show_help_primitives:
+                col.label(text="• Flat surface (good for floors, walls)")
+            
+            col.operator("mesh.primitive_cube_add", text="Cube", icon='MESH_CUBE')
+            if scene.show_help_primitives:
+                col.label(text="• Basic box shape")
+            
+            col.operator("mesh.primitive_circle_add", text="Circle", icon='MESH_CIRCLE')
+            if scene.show_help_primitives:
+                col.label(text="• Flat circle (good for starting complex shapes)")
+            
+            col.operator("mesh.primitive_uv_sphere_add", text="Sphere", icon='MESH_UVSPHERE')
+            if scene.show_help_primitives:
+                col.label(text="• Perfect ball shape")
+            
+            col.operator("mesh.primitive_cylinder_add", text="Cylinder", icon='MESH_CYLINDER')
+            if scene.show_help_primitives:
+                col.label(text="• Tube shape (good for pillars, cans)")
+            
+            col.operator("mesh.primitive_cone_add", text="Cone", icon='MESH_CONE')
+            if scene.show_help_primitives:
+                col.label(text="• Pointed cone shape")
+            
+            col.operator("mesh.primitive_torus_add", text="Torus", icon='MESH_TORUS')
+            if scene.show_help_primitives:
+                col.label(text="• Donut shape")
+            
+            if scene.show_help_primitives:
+                col.separator()
+                col.label(text="💡 Tip: All primitives appear at 3D cursor location")
+
+        # Don't forget to add these properties to your PropertyGroup:
+        # show_primitives: BoolProperty(name="Show Primitives", default=True)
+        # show_help_primitives: BoolProperty(name="Show Primitives Help", default=False)
+        
+        
         # 🧩 Object Mode
         box = layout.box()
         row = box.row()
@@ -743,6 +802,10 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.operator("object.duplicate_move", text="Duplicate (Shift + D)")
             if scene.show_help_object_mode:
                 col.label(text="• Duplicate: Creates copy you can move")
+            col.operator("object.make_single_user", text="Make Unique [single user] (U)")
+            if scene.show_help_object_mode:
+                col.label(text="• Make unique as its own object")
+                col.label(text="• Keep seperate mesh and textures")
             col.operator("object.delete", text="Delete (X or Delete)")
             if scene.show_help_object_mode:
                 col.label(text="• Delete: Removes object completely")
@@ -757,6 +820,72 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                 col.label(text="• Select multiple objects first")
                 col.label(text="• Last selected becomes the result")
                 col.separator()
+          
+                
+            col.separator()
+            col.separator()
+            # MODIFIERS
+            col.label(text="Modifier: Stack (Properties > Green spanner)")
+
+            # Bevel Modifier
+            op = col.operator("object.modifier_add", text="Bevel Modifier")
+            op.type = 'BEVEL'
+            if scene.show_help_edit_mode:    
+                col.label(text="• Add Bevel Modifier")
+
+            # Boolean Modifier    
+            op = col.operator("object.modifier_add", text="Boolean Modifier")
+            op.type = 'BOOLEAN'
+            if scene.show_help_edit_mode:    
+                col.label(text="• Add Boolean Modifier")
+
+            # Decimate Modifier
+            op = col.operator("object.modifier_add", text="Decimate Modifier")
+            op.type = 'DECIMATE'
+            if scene.show_help_edit_mode:    
+                col.label(text="• Add Decimate Modifier")
+
+            # Mirror Modifier
+            op = col.operator("object.modifier_add", text="Mirror Modifier")
+            op.type = 'MIRROR'
+            if scene.show_help_edit_mode:    
+                col.label(text="• Add Mirror Modifier")
+
+            # Solidify Modifier
+            op = col.operator("object.modifier_add", text="Solidify Modifier")
+            op.type = 'SOLIDIFY'
+            if scene.show_help_edit_mode:    
+                col.label(text="• Add Solidify Modifier")
+            
+            col.label(text="• Subdiv Modifier set to level 1, 2, 3 ")
+            
+            op = col.operator("object.subdivision_set", text="Create Level 1 Modifier (Ctrl + 1)")
+            op.level = 1
+            op.relative = False
+            if scene.show_help_edit_mode:    
+                col.label(text="• Create Modifier = Level 1")
+
+            col.operator("object.subdivision_set", text="Create Level 2 Modifier (Ctrl + 2)")
+            op.level = 2
+            op.relative = False
+            if scene.show_help_edit_mode:    
+                col.label(text="• Create Modifier = Level 2")
+            
+            col.operator("object.subdivision_set", text="Create Level 3 Modifier (Ctrl + 3)")
+            op.level = 3
+            op.relative = False
+            if scene.show_help_edit_mode:    
+                col.label(text="• Create Modifier = Level 3")
+            
+            col.operator("object.make_links_data", text="Copy Modifiers - from > to (Ctrl + L)").type='MODIFIERS'
+            if scene.show_help_edit_mode:    
+                col.label(text="• Copy Modifiers = from (1st selection) to (shift click 2nd selection")
+            
+            #col.label(text="Separate:")
+            #col.operator("mesh.separate", text="Separate Parts (P)")
+            #if scene.show_help_edit_mode:    
+                #col.label(text="• Separate = Break into separate objects")
+            
             
             col.separator()
             col.separator()
@@ -938,7 +1067,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.label(text="Edge Tools:")
             col.operator("mesh.bevel", text="Bevel Edges/Vertices (Ctrl+B)")
             if scene.show_help_edit_mode:
-                col.label(text="• Bevel = Add bevel or chamfer (mouse wheel)")
+                col.label(text="• Bevel = Add bevel or chamfer (Mouse drag and wheel)")
             col.operator("mesh.bridge_edge_loops", text="Bridge Edge Loops (Ctrl + E)")
             if scene.show_help_edit_mode:
                 col.label(text="• Bridge = Connect two edge loops with faces")
@@ -958,6 +1087,9 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.operator("mesh.subdivide", text="Subdivide Edges (RMB > S)")
             if scene.show_help_edit_mode:    
                 col.label(text="• Subdivide = Add cuts to increase edge density")
+            col.operator("mesh.unsubdivide", text="Unsubdivide (RMB > S)")
+            if scene.show_help_edit_mode:    
+                col.label(text="• Quick Unsubdivide")
             col.separator()
             col.label(text="• Edge Slide along face (gg)")
             
@@ -1008,36 +1140,8 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             if scene.show_help_edit_mode:    
                 col.label(text="• Knife = Cut custom lines through mesh")
             
-            col.separator()
-            col.separator()
-            
-            # MODIFIERS
-            col.label(text="Modifiers:")
-            col.label(text="• Create Modifier - Ctrl + (keypad 1, 2, 3)")
-            col.label(text="• Creates a new Modifier set to level 1, 2, 3 ")
-            
-            op = col.operator("object.subdivision_set", text="Create Level 1 Modifier (Ctrl + 1)")
-            op.level = 1
-            op.relative = False
-            if scene.show_help_edit_mode:    
-                col.label(text="• Create Modifier = Level 1")
-            
-            col.operator("object.subdivision_set", text="Create Level 2 Modifier (Ctrl + 2)")
-            op.level = 2
-            op.relative = False
-            if scene.show_help_edit_mode:    
-                col.label(text="• Create Modifier = Level 2")
-            
-            col.operator("object.subdivision_set", text="Create Level 3 Modifier (Ctrl + 3)")
-            op.level = 3
-            op.relative = False
-            if scene.show_help_edit_mode:    
-                col.label(text="• Create Modifier = Level 3")
-            
-            col.operator("object.make_links_data", text="Copy Modifiers - from > to (Ctrl + L)").type='MODIFIERS'
-            if scene.show_help_edit_mode:    
-                col.label(text="• Copy Modifiers = from (1st selection) to (shift click 2nd selection")
-            
+          
+                        
             col.separator()
             col.separator()
             # SPLIT & SEPARATE
