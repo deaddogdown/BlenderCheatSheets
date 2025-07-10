@@ -13,6 +13,7 @@ A simple and intuitive toolbar designed to help **Blender modellers of all skill
 - Designed for clarity and accessibility
 - Commands grouped first by category, then core usage patterns and alpha sorting to find common commands easily
 - Shortcut keys listed with every command where possible. Otherwise just click the button and the button will do the job
+- Usage of the concept of "Inverse Pairs" to show how functions share a common relationship, example "undo and redo"
 - Reduces cognitive load of trying to remember a zillion commands and forgetting what a shortcut combo was
 - Less "3d debugging" time - More productive "3d creation" time
 - Keeps you in the creative flow - Mega Bonus!
