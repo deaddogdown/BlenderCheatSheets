@@ -4,12 +4,12 @@ A simple and intuitive toolbar designed to help **Blender modellers of all skill
 
 ## 🧰 Features
 
-- You choose whether you want to use Buttons or Shortcuts
 - Provides a comprehensive cheatsheet panel inside Blenders 3d view
-- Clean friendly UI panel inside Blender for users of any skill level, especially newbies and intermediates
-- Consistency in 3d Language concepts
+- You choose whether you want to use Buttons or Shortcuts
 - Lists common keyboard, mouse, and numpad shortcuts
 - Provides explicit button alternatives for all common commands
+- Clean friendly UI panel inside Blender for users of any skill level, especially newbies and intermediates
+- Consistency in 3d Language concepts
 - Designed for clarity and accessibility
 - Commands grouped first by category, then core usage patterns and alpha sorting to find common commands easily
 - Shortcut keys listed with every command where possible. Otherwise just click the button and the button will do the job
