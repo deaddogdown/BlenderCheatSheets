@@ -112,4 +112,10 @@ The use of the term “Blender” in this project’s name and description is fo
 
 ---
 
+## Legal
+
+All rights reserved. This addon is for public benefit and follows Blender.org license policy of GPLv2 for all perpetuity. No permission is given to publish this addon on any third party store, whether free or paid, without the consent of the creator. If you paid for this addon, were forced to sign up for something, or had to install software to get it, make sure to ask for your money back, delete that account and go GPLv2.
+
+---
+
 ![Main Panel](screenshots/DDD-GameStudio.png)
