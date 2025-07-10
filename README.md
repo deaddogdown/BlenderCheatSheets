@@ -12,9 +12,9 @@ A simple and intuitive toolbar designed to help **Blender modellers of all skill
 - Provides explicit button alternatives for all common commands
 - Designed for clarity and accessibility
 - Commands grouped first by category, then core usage patterns and alpha sorting to find common commands easily
-- Shorcuts keys listed with every command where possible. Otherwise just click the button
-- Reduces cognitive load of trying to remember a zillion commands and forgetting what a shortcut was
-- Less 3d debugging time - More productive 3d creating time
+- Shortcut keys listed with every command where possible. Otherwise just click the button and the button will do the job
+- Reduces cognitive load of trying to remember a zillion commands and forgetting what a shortcut combo was
+- Less "3d debugging" time - More productive "3d creation" time
 - Keeps you in the creative flow - Mega Bonus!
 - Compatible with **Blender LTS versions**
 - 100% **free and open source**, forever
@@ -91,15 +91,19 @@ You are free to:
 - ✅ Share it
 
 With the condition that:
-- 🔁 Any derivative work must also remain open source and free of charge with no conditions set for the access to this addon, and strictly remain under the same license and give credit to "Dead Dog Down Game Studio" and provide a link back to this github page via github.com/deaddogdown
+- 🔁 Any derivative work must also remain open source and free of charge and free of conditional access, with no need for login or registration, and no conditions set for the access to this addon, and strictly remain under the same license and give credit to "Dead Dog Down Game Studio" and provide a link back to this github page via github.com/deaddogdown
 
 The 3d language motif designed into this addon remains the sole intellectual property of Dead Dog Down Game Studio and its Creator, and we willingly invite Blender.org to collaborate on the development of this addon as a learning tool in two important areas, firstly general 3d language which is agnostic to any specific 3d vendor, and secondly usage and adoption inside of Blender.
 
-Modern 3d Language has become very mature, but it has been built up on assumptions that only the "in crowd" understand since they have the most exposure. However this becomes a barrier to entry for Newbies seeking to get a sound foundational knowledge of 3d language in general, independent of what 3d program they use. In this addon, implicit assumptions and made explicit, and the most common concepts are exposed early on, to help the user understand the language of 3D design. All users will gain some insight and clarification from the structure of this addon. We have done our best to group functions in a sequence that fosters precedence, common usage patterns and alpha ordering to reduce brain drain. This is still a mammoth task since modern 3D software is very mature and complex. But what this addon will give you, is a visual reference to work from, combined with buttons and the shortcut commands to get your creative work done.
+Modern 3d Language has become very mature, but it has been built up on assumptions that only the "in crowd" understand since historically they have had the most exposure. However this becomes a barrier to entry for Newbies seeking to get a sound foundational knowledge of 3d language in general, independent of what 3d program they use. In this addon, implicit assumptions and made explicit, and the most common concepts are exposed early on, to help the user understand the language of 3D design. All users will gain some insight and clarification from the structure of this addon.
 
-We do not believe in button shuffling, and strive to keep ui consistency. We will not move buttons around if it simply serves one persons favorite idea of they want to use the addon. We wish to respect our users, and give them a ui that does not change, so they can spend more time being productive, and less time trying to learn a new layout that wastes time, money and patience. When in production, the tools must just work.
+We have done our best to group functions in a sequence that fosters precedence, common usage patterns and alpha ordering to reduce brain drain. This is still a mammoth task since modern 3D software is very mature and complex. But what this addon will give you, is a visual reference to work from, combined with buttons and the shortcut commands to get your creative work done.
 
-We do not push updates, since we don't believe in updates during production. We also do not metric, use your data, violate your trust, or wish to rich off something that is not true to our vision. We give these tools for free, but we work on our games to sell one day. We have no time to build other things that are outside of our core focus, we are not a distributor who over-charges you, we are not a reseller who makes you pay with your money, time, and your data. We respect your privacy and that you want to be left alone to do what you do best.
+We do not believe in button shuffling, and strive to keep ui consistency. We will not move buttons around if it simply serves one persons favorite idea of how they want to use the addon. We wish to respect our users, and give them a ui that does not change, so they can spend more time being productive, and less time trying to learn a new layout that wastes time, money and patience. When in production, the tools must just work.
+
+We do not push updates, since we don't believe in software updates during production. That alone is "production suicide". We also do not metric, use your data, violate your trust, or wish to rich off something that is not true to our vision. We give these tools for free, while we work on our games to sell one day. We have no time to build other things that are outside of our core focus, and for this reason we are not a distributor who over-charges you, we are not a reseller who makes you pay with your money, time, and your data. We respect your privacy and that you want to be left alone to do what you do best, with no nags, no lock-in, no spying.
+
+We believe that our reward must come from real work as we bring our games to you when we feel the time is right.
 
 See the [LICENSE](LICENSE) file for full terms.
 
