@@ -1,7 +1,7 @@
 import bpy
 from bpy.props import BoolProperty
 from bpy.props import EnumProperty
-
+from mathutils import Matrix, Vector
 
 
 
@@ -77,7 +77,225 @@ def unregister_properties():
         if hasattr(bpy.types.Scene, prop):
             delattr(bpy.types.Scene, prop)
 
+def get_object_center(obj):
+    """
+    Returns the most accurate center of the object in world space.
+    Prioritizes:
+        1. Center of mass (if available)
+        2. Bounding box center
+        3. Average vertex position (fallback)
+    """
+    if obj.type != 'MESH':
+        return None
 
+    # 1. Try Center of Mass (requires physics calculation)
+    try:
+        bpy.ops.object.modifier_add(type='VERTEX_WEIGHT_PROXIMITY')  # Just to force a mass recalc
+        bpy.ops.object.center_set(type='CENTER_OF_MASS')
+        center_com = obj.matrix_world @ obj.location
+        bpy.ops.object.modifier_remove(modifier="VertexWeightProximity")  # Cleanup
+        return center_com
+    except:
+        pass  # Not all meshes can compute center of mass
+
+    # 2. Use Bounding Box Center
+    def bbox_center():
+        corners = [obj.matrix_world @ Vector(corner) for corner in obj.bound_box]
+        min_co = Vector((min(c[0] for c in corners),
+                         min(c[1] for c in corners),
+                         min(c[2] for c in corners)))
+        max_co = Vector((max(c[0] for c in corners),
+                         max(c[1] for c in corners),
+                         max(c[2] for c in corners)))
+        return (min_co + max_co) / 2
+
+    # If object is not deformed or scaled oddly, use bounding box
+    if obj.dimensions.length > 0:
+        return bbox_center()
+
+    # 3. Fallback: Average of vertex positions
+    try:
+        mesh = obj.data
+        total = Vector()
+        count = 0
+        for v in mesh.vertices:
+            total += obj.matrix_world @ v.co
+            count += 1
+        return total / count if count else None
+    except:
+        return None
+
+def move_origin_point_to_cursor(direction='BOTTOM'):
+    obj = bpy.context.active_object
+    if not obj or obj.type != 'MESH':
+        return False
+
+    # Get bounding box corners in world space
+    bbox = [obj.matrix_world @ Vector(corner) for corner in obj.bound_box]
+
+    if direction == 'BOTTOM':
+        z_coord = min(corner.z for corner in bbox)
+        x_center = sum(corner.x for corner in bbox) / 8
+        y_center = sum(corner.y for corner in bbox) / 8
+        origin_point = Vector((x_center, y_center, z_coord))
+    elif direction == 'TOP':
+        z_coord = max(corner.z for corner in bbox)
+        x_center = sum(corner.x for corner in bbox) / 8
+        y_center = sum(corner.y for corner in bbox) / 8
+        origin_point = Vector((x_center, y_center, z_coord))
+    elif direction == 'FRONT':
+        y_coord = min(corner.y for corner in bbox)
+        x_center = sum(corner.x for corner in bbox) / 8
+        z_center = sum(corner.z for corner in bbox) / 8
+        origin_point = Vector((x_center, y_coord, z_center))
+    elif direction == 'BACK':
+        y_coord = max(corner.y for corner in bbox)
+        x_center = sum(corner.x for corner in bbox) / 8
+        z_center = sum(corner.z for corner in bbox) / 8
+        origin_point = Vector((x_center, y_coord, z_center))
+    elif direction == 'LEFT':
+        x_coord = min(corner.x for corner in bbox)
+        y_center = sum(corner.y for corner in bbox) / 8
+        z_center = sum(corner.z for corner in bbox) / 8
+        origin_point = Vector((x_coord, y_center, z_center))
+    elif direction == 'RIGHT':
+        x_coord = max(corner.x for corner in bbox)
+        y_center = sum(corner.y for corner in bbox) / 8
+        z_center = sum(corner.z for corner in bbox) / 8
+        origin_point = Vector((x_coord, y_center, z_center))
+    else:
+        return False
+
+    cursor_loc = bpy.context.scene.cursor.location
+    delta = cursor_loc - origin_point
+    obj.location += delta
+
+    return True
+
+
+class MESH_OT_top_origin_to_cursor(bpy.types.Operator):
+    bl_idname = "mesh.top_origin_to_cursor"
+    bl_label = "Top Origin to 3D Cursor"
+    bl_description = "Move object so its top origin lands exactly on the 3D cursor"
+    bl_options = {'REGISTER', 'UNDO'}
+    def execute(self, context):
+        success = move_origin_point_to_cursor(direction='TOP')
+        if not success:
+            self.report({'WARNING'}, "Operation failed")
+            return {'CANCELLED'}
+        return {'FINISHED'}
+
+class MESH_OT_bottom_origin_to_cursor(bpy.types.Operator):
+    bl_idname = "mesh.bottom_origin_to_cursor"
+    bl_label = "Bottom Origin to 3D Cursor"
+    bl_description = "Move object so its bottom origin lands exactly on the 3D cursor"
+    bl_options = {'REGISTER', 'UNDO'}
+    def execute(self, context):
+        success = move_origin_point_to_cursor(direction='BOTTOM')
+        if not success:
+            self.report({'WARNING'}, "Operation failed")
+            return {'CANCELLED'}
+        return {'FINISHED'}
+
+class MESH_OT_front_origin_to_cursor(bpy.types.Operator):
+    bl_idname = "mesh.front_origin_to_cursor"
+    bl_label = "Front Origin to 3D Cursor"
+    bl_description = "Move object so its front origin lands exactly on the 3D cursor"
+    bl_options = {'REGISTER', 'UNDO'}
+    def execute(self, context):
+        success = move_origin_point_to_cursor(direction='FRONT')
+        if not success:
+            self.report({'WARNING'}, "Operation failed")
+            return {'CANCELLED'}
+        return {'FINISHED'}
+
+class MESH_OT_back_origin_to_cursor(bpy.types.Operator):
+    bl_idname = "mesh.back_origin_to_cursor"
+    bl_label = "Back Origin to 3D Cursor"
+    bl_description = "Move object so its back origin lands exactly on the 3D cursor"
+    bl_options = {'REGISTER', 'UNDO'}
+    def execute(self, context):
+        success = move_origin_point_to_cursor(direction='BACK')
+        if not success:
+            self.report({'WARNING'}, "Operation failed")
+            return {'CANCELLED'}
+        return {'FINISHED'}
+
+class MESH_OT_left_origin_to_cursor(bpy.types.Operator):
+    bl_idname = "mesh.left_origin_to_cursor"
+    bl_label = "Left Origin to 3D Cursor"
+    bl_description = "Move object so its left origin lands exactly on the 3D cursor"
+    bl_options = {'REGISTER', 'UNDO'}
+    def execute(self, context):
+        success = move_origin_point_to_cursor(direction='LEFT')
+        if not success:
+            self.report({'WARNING'}, "Operation failed")
+            return {'CANCELLED'}
+        return {'FINISHED'}
+
+class MESH_OT_right_origin_to_cursor(bpy.types.Operator):
+    bl_idname = "mesh.right_origin_to_cursor"
+    bl_label = "Right Origin to 3D Cursor"
+    bl_description = "Move object so its right origin lands exactly on the 3D cursor"
+    bl_options = {'REGISTER', 'UNDO'}
+    def execute(self, context):
+        success = move_origin_point_to_cursor(direction='RIGHT')
+        if not success:
+            self.report({'WARNING'}, "Operation failed")
+            return {'CANCELLED'}
+        return {'FINISHED'}
+
+class SHORTCUTS_OT_CursorToGeometryCenter(bpy.types.Operator):
+    bl_idname = "shortcuts.cursor_to_geometry_center"
+    bl_label = "3D Cursor to Geometry Center"
+    bl_description = "Move 3D cursor to the center of the selected object's geometry (accurate, even if origin is offset)"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        obj = context.active_object
+        if not obj or not obj.select_get():
+            self.report({'WARNING'}, "No active object selected")
+            return {'CANCELLED'}
+
+        center = get_object_center(obj)
+        if not center:
+            self.report({'WARNING'}, "Could not compute geometry center")
+            return {'CANCELLED'}
+
+        # Move 3D cursor to calculated center
+        context.scene.cursor.location = center
+
+        return {'FINISHED'}
+
+class SHORTCUTS_OT_ObjectGeometryToCursor(bpy.types.Operator):
+    bl_idname = "shortcuts.object_geometry_to_cursor"
+    bl_label = "Object Geometry to 3D Cursor"
+    bl_description = "Move object's geometry so its center aligns with the 3D cursor, without moving the origin"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        obj = context.active_object
+        if not obj or not obj.select_get():
+            self.report({'WARNING'}, "No active object selected")
+            return {'CANCELLED'}
+        
+        if obj.type != 'MESH':
+            self.report({'INFO'}, "Only works on mesh objects")
+            return {'CANCELLED'}
+
+        geo_center = get_object_center(obj)
+        cursor_loc = context.scene.cursor.location
+
+        if not geo_center:
+            self.report({'WARNING'}, "Could not compute object center")
+            return {'CANCELLED'}
+
+        delta = cursor_loc - geo_center
+
+        mesh = obj.data
+        mesh.transform(Matrix.Translation(delta))
+
+        return {'FINISHED'}
 
 # Optional: Add a custom operator to quickly set common unit combinations
 class SHORTCUTS_OT_SetUnits(bpy.types.Operator):
@@ -149,11 +367,15 @@ class MESH_OT_smart_snap(bpy.types.Operator):
         # Set to Closest
         ts.snap_target = 'CLOSEST'
         
-        # Include Active (this prevents hunting other selected vertices)
-        ts.use_snap_self = True
-        
-        # Set transform mode to Move (this might be automatic)
-        # ts.snap_transform = True  # This might not be needed
+        # Reset all snap options to known defaults
+        ts.use_snap_self = True                     # "Include Active" (prevents hunting other selected vertices)
+        ts.use_snap_align_rotation = False          # "Align rotation to target"
+        ts.use_snap_backface_culling = False        # "Backface culling"
+        ts.use_snap_edit = True                     # "Include edited" 
+        ts.use_snap_nonedit = False                 # "Include non-edited"
+        ts.use_snap_selectable = False              # "Exclude non-selectable"
+        ts.use_snap_rotate = False                  # "Rotate"
+        ts.use_snap_scale = False                   # "Scale"
         
         return {'FINISHED'}
 
@@ -296,8 +518,11 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.separator()
             col.separator()
         
+            
             col.label(text="Useful Commands:")    
-            col.operator("wm.search_menu", text="Search Operators: F3 or Spacebar")
+            row = col.row()
+            row.scale_y = 1.35
+            row.operator("wm.search_menu", text="Search Operators: F3 or Spacebar")
             
             
             # Info labels for shortcuts that don't need operators:
@@ -324,7 +549,42 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         if scene.show_viewport:
             col = box.column(align=True)
             
+            
+            col.separator()
+            # ADVANCED NAVIGATION
+            col.label(text="Advanced Navigation:")
+            row = col.row()
+            row.scale_y = 1.35
+            # Transform Orientation buttons with visual feedback
+            row.operator("view3d.walk", text="Walk Mode (Shift + `)")
+            
+            col.separator()
+            col.label(text="Global/Local:")
+            # Transform Orientation buttons with visual feedback
+
+            row = col.row()
+            # Transform Orientation buttons with visual feedback
+            row.scale_y = 1.0
+            current_orientation = context.scene.transform_orientation_slots[0].type
+
+            # Global Orientation button
+            sub_row = row.row()
+            if current_orientation == 'GLOBAL':
+                sub_row.alert = True
+            op = sub_row.operator("wm.context_set_enum", text="Global", icon='ORIENTATION_GLOBAL')
+            op.data_path = "scene.transform_orientation_slots[0].type"
+            op.value = 'GLOBAL'
+
+            # Local Orientation button
+            sub_row = row.row()
+            if current_orientation == 'LOCAL':
+                sub_row.alert = True
+            op = sub_row.operator("wm.context_set_enum", text="Local", icon='ORIENTATION_LOCAL')
+            op.data_path = "scene.transform_orientation_slots[0].type"
+            op.value = 'LOCAL'
+            
             # VIEWPORT SETTINGS (Less common but useful)
+            col.separator()
             col.separator()
             col.label(text="Viewport Settings:")
             if hasattr(context.preferences.inputs, 'use_mouse_emulate_3_button'):
@@ -369,11 +629,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             
             col.operator("view3d.view_persportho", text="Perspective/Orthographic (5)")
             
-            col.separator()
-            col.separator()
-            # ADVANCED NAVIGATION
-            col.label(text="Advanced Navigation:")
-            col.operator("view3d.walk", text="Walk Mode (Shift + `)")
+            
             
             col.separator()
             col.separator()
@@ -391,7 +647,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.separator()
 
 
-        # 🧩 Transform and Manipulation
+        # 🧩 Transform
         box = layout.box()
         row = box.row()
         row.prop(scene, "show_transform", text="TRANSFORM", emboss=False, icon='ORIENTATION_GIMBAL')
@@ -410,7 +666,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             # CORE TRANSFORMS (work everywhere)
             col.label(text="Basic Transforms:")
             row = col.row()
-            row.scale_y = 1.2
+            row.scale_y = 1.35
             row.operator("transform.translate", text="Move (G)")
             row.operator("transform.rotate", text="Rotate (R)")
             row.operator("transform.resize", text="Scale (S)")
@@ -421,13 +677,12 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                 col.label(text="• X-axis only: X • Y-axis only: Y • Z-axis only: Z")
                 col.label(text="• Local axes: XX, YY, ZZ")
                 
-            col.separator()
             col.separator()  
             # ADVANCED HELPERS
             col.label(text="Enable Snapping:")
-            
             col.prop(context.tool_settings, "use_snap", text="Enable Snapping (SHIFT + TAB)") 
             # Smart Snaps section
+ 
             col.separator()
             col.label(text="Smart Snaps:")
             col.operator("mesh.smart_snap", text="Smart Snap", icon='SNAP_VERTEX')
@@ -436,6 +691,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.operator("mesh.smart_snap_vertex", text="Smart Snap to Vertex", icon='VERTEXSEL')
             col.operator("mesh.smart_snap_edge", text="Smart Snap to Edge Mid", icon='EDGESEL') 
             col.operator("mesh.smart_snap_face", text="Smart Snap to Face Center", icon='FACESEL')
+            
             col.separator()
             col.label(text="Proportional Editing:")
             col.operator("wm.context_toggle", text="Toggle Proportional Editing (O)", icon='PROP_ON').data_path = "tool_settings.use_proportional_edit_objects"
@@ -454,6 +710,14 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         if scene.show_cursor:
             col = box.column(align=True)
             
+            # Selection status button
+            status_row = col.row()
+            if context.selected_objects:
+                status_row.alert = True
+                status_row.label(text="Objects Selected - Tools Active", icon='OBJECT_DATAMODE')
+            else:
+                status_row.label(text="No Objects Selected - Select Something First", icon='RESTRICT_SELECT_ON')
+            
             # THE WHY - What is the 3D Cursor?
             if scene.show_help_cursor:
                 col.label(text="3D Cursor = Universal Reference Point")
@@ -467,50 +731,56 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.label(text="KEY COMBINATION FOR ALL BELOW - (Shift + S)")
                 # INVERSE PAIRS - clearly labeled
             if scene.show_help_cursor:
-                col.label(text="Move TO Cursor ↔ Move FROM Cursor:")
+                col.label(text="Move TO 3D Cursor ↔ Move FROM 3D Cursor:")
            
             # Reset option
-            col.operator("view3d.snap_cursor_to_center", text="Reset Cursor to World Origin (0,0,0)")      
+            row = col.row()
+            row.scale_y = 1.5
+            row.operator("view3d.snap_cursor_to_center", text="Reset Cursor to World Origin (0,0,0)")      
+            
+            col.separator()
+            col.separator()
+            col.label(text="INVERSE PAIRS:")
+            col.separator()
+            # Objects
+            col.label(text="• 3D Cursor ↔ Object Origin:")
+            row = col.row()
+            row.operator("view3d.snap_cursor_to_selected", text="3D Cursor to Object Origin")
+            row.operator("object.origin_set", text="Object Origin to 3D Cursor").type = 'ORIGIN_CURSOR'
             
             col.separator()
             col.separator()
             # Objects
-            col.label(text="• Object Origin:")
+            col.label(text="• 3D Cursor ↔ Object (Geometry):")
             row = col.row()
-            row.operator("view3d.snap_cursor_to_center", text="Cursor → Origin")
-            row.operator("object.origin_set", text="Origin → Cursor").type = 'ORIGIN_CURSOR'
-            
-            col.separator()
-            col.separator()
-            # Objects
-            col.label(text="• Objects:")
-            row = col.row()
-            row.operator("view3d.snap_cursor_to_selected", text="Cursor → Object")
-            row.operator("view3d.snap_selected_to_cursor", text="Object → Cursor")
+            #row.operator("view3d.snap_cursor_to_selected", text="3D Cursor to Object")
+            row.operator("shortcuts.cursor_to_geometry_center", text="3D Cursor to Object")
+            #row.operator("view3d.snap_selected_to_cursor", text="Object to 3D Cursor")
+            row.operator("shortcuts.object_geometry_to_cursor", text="Object to 3D Cursor")
             
             col.separator()
             col.separator()
             # Vertices (Edit Mode)
-            col.label(text="• Vertices (Edit Mode):")
+            col.label(text="• 3D Cursor ↔ Vertices (Edit Mode):")
             row = col.row()
-            row.operator("view3d.snap_cursor_to_selected", text="Cursor → Vertex")
-            row.operator("view3d.snap_selected_to_cursor", text="Vertex → Cursor")
+            row.operator("view3d.snap_cursor_to_selected", text="3D Cursor to Vertex")
+            row.operator("view3d.snap_selected_to_cursor", text="Vertex to 3D Cursor")
             
             col.separator()
             col.separator()
             # Edges (Edit Mode)
-            col.label(text="• Edges (Edit Mode):")
+            col.label(text="• 3D Cursor ↔ Edges (Edit Mode):")
             row = col.row()
-            row.operator("view3d.snap_cursor_to_selected", text="Cursor → Edge")
-            row.operator("view3d.snap_selected_to_cursor", text="Edge → Cursor")
+            row.operator("view3d.snap_cursor_to_selected", text="3D Cursor to Edge")
+            row.operator("view3d.snap_selected_to_cursor", text="Edge to 3D Cursor")
             
             col.separator()
             col.separator()
             # Faces (Edit Mode)
-            col.label(text="• Faces (Edit Mode):")
+            col.label(text="• 3D Cursor ↔ Faces (Edit Mode):")
             row = col.row()
-            row.operator("view3d.snap_cursor_to_selected", text="Cursor → Face")
-            row.operator("view3d.snap_selected_to_cursor", text="Face → Cursor")
+            row.operator("view3d.snap_cursor_to_selected", text="3D Cursor to Face")
+            row.operator("view3d.snap_selected_to_cursor", text="Face to 3D Cursor")
             
             col.separator()
             col.separator()  
@@ -538,19 +808,23 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             # 3D CURSOR CONTROL
             if scene.show_help_world_origin:
                 col.label(text="3D Cursor (The Red & White Target):")
-            col.operator("view3d.snap_cursor_to_center", text="Reset 3D Cursor to World Origin (Shift + S)")
+            row = col.row()
+            row.scale_y = 1.2
+            row.operator("view3d.snap_cursor_to_center", text="Reset 3D Cursor to World Origin (Shift + S)")
             
             
             if scene.show_help_world_origin:
                 col.label(text="• 3D Cursor marks where new objects appear")
                 col.label(text="• Move cursor anywhere (Shift + RMB)")
-                col.separator()
+            col.separator()
             
             # MOVING OBJECTS TO WORLD ORIGIN
             if scene.show_help_world_origin:
                 col.label(text="Move Objects to World Origin:")
-                
-            col.operator("object.location_clear", text="Move Selected to World Origin (Alt + G)").clear_delta = False
+            
+            row = col.row()
+            row.scale_y = 1.2            
+            row.operator("object.location_clear", text="Move Selected to World Origin (Alt + G)").clear_delta = False
             #col.operator("object.rotation_clear", text="Reset Selected Rotation").clear_delta = False
             #col.operator("object.scale_clear", text="Reset Selected Scale").clear_delta = False
             if scene.show_help_world_origin:
@@ -572,9 +846,17 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         
         if scene.show_object_origin:
             col = box.column(align=True)
-            is_edit_mode = bpy.context.mode == 'EDIT_MESH'
+            is_edit_mode = bpy.context.mode == 'EDIT_MESH'        
             
+            # Selection status button
+            status_row = col.row()
+            if context.selected_objects:
+                status_row.alert = True
+                status_row.label(text="Objects Selected - Tools Active", icon='OBJECT_DATAMODE')
+            else:
+                status_row.label(text="No Objects Selected - Select Something First", icon='RESTRICT_SELECT_ON')
             
+            col.separator()
             # Maybe add this at the start of Object Origin:
             if scene.show_help_object_origin:
                 col.label(text="Object Origin = Pivot Point for:")
@@ -603,36 +885,61 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.operator("object.origin_set", text="Origin to Bounding Box Center").type = 'ORIGIN_CENTER_OF_VOLUME'
             #col.operator("object.origin_set", text="Origin to Bottom of Object").type = 'ORIGIN_GEOMETRY'
             col.operator("mesh.origin_to_bottom", text="Origin to Bottom of Object")
+            col.separator()
+            
+            col.label(text="ORIGIN POSITION:")
+            if scene.show_help_object_origin:
+                col.label(text="Select your object first")
+                col.label(text="Shift + RMB to place your cursor")
+                col.label(text="Click one of the buttons to reposition your object")
+                col.separator()
+
+
+            col.operator("mesh.top_origin_to_cursor", text="Top Origin to 3D Cursor")
+            
+            col.separator()
+            col.operator("mesh.bottom_origin_to_cursor", text="Bottom Origin to 3D Cursor")
+            
+            col.separator()
+            col.operator("mesh.front_origin_to_cursor", text="Front Origin to 3D Cursor")
+            
+            col.separator()
+            col.operator("mesh.back_origin_to_cursor", text="Back Origin to 3D Cursor")
+            
+            col.separator()
+            col.operator("mesh.left_origin_to_cursor", text="Left Origin to 3D Cursor")
+            
+            col.separator()
+            col.operator("mesh.right_origin_to_cursor", text="Right Origin to 3D Cursor")
+            
+ 
+            col.separator()
+            # Object Origin ↔ Global Zero
+            col.label(text="Object Origin ↔ World Zero:")
+            col.operator("mesh.origin_to_global_zero", text="Object Origin to World Zero")
+            col.enabled = not is_edit_mode
             
             col.separator()
             col.separator()
             col.label(text="INVERSE PAIRS:")
             if scene.show_help_object_origin:   
                 col.label(text="These commands below are grouped by two way relationship")
-                col.separator()
-                
-            # Global Zero ↔ Object Origin
-            col.label(text="Object Origin ↔ World Zero:")
-            col.operator("mesh.origin_to_global_zero", text="Move Object Origin to World Zero")
-            col.enabled = not is_edit_mode
-           
+  
+
+            col.separator()   
+            # Object Origin ↔ 3D Cursor
+            col.label(text="Object Origin ↔ 3D Cursor:")
+            col.operator("object.origin_set", text="Object Origin to 3D Cursor").type = 'ORIGIN_CURSOR'
+            col.operator("view3d.snap_cursor_to_selected", text="3D Cursor to Object Origin")
+        
             col.separator()
             col.separator() 
             # Object Origin ↔ Object Geometry
             col.label(text="Object Origin ↔ Object Geometry:")
-            col.operator("object.origin_set", text="Move Object Origin to Object Geometry").type = 'ORIGIN_GEOMETRY'
+            col.operator("object.origin_set", text="Object Origin to Object Geometry").type = 'ORIGIN_GEOMETRY'
             #col.enabled = not is_edit_mode
-            col.operator("object.origin_set", text="Move Object Geometry to Object Origin").type = 'GEOMETRY_ORIGIN'
-            
-            col.separator()
-            col.separator()   
-            # 3D Cursor ↔ Object Origin
-            col.label(text="3D Cursor ↔ Object Origin:")
-            col.operator("view3d.snap_cursor_to_selected", text="Move 3D Cursor to Object Origin")
-            col.operator("object.origin_set", text="Move Object Origin to 3D Cursor").type = 'ORIGIN_CURSOR'
-            
-            
-
+            col.operator("object.origin_set", text="Object Geometry to Object Origin").type = 'GEOMETRY_ORIGIN'
+      
             col.separator()
             col.separator()
         
@@ -717,18 +1024,47 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.separator()
             col.separator()
             col.label(text="Apply Selected Transforms:")  
-            col.operator("object.transform_apply", text="Apply Transforms - Rotation and Scale (Ctrl + A)")
+            
+            row = col.row()
+            row.scale_y = 1.35
+            row.operator("object.transform_apply", text="Apply Rotation and Scale (Ctrl + A)")
             if scene.show_help_general:
                 col.label(text="• Apply Transforms: Makes current rotation/scale permanent")
                 col.label(text="• Used after Rotation and Scaling")
             
+            col.separator()            
+            # New section: Apply Scale & Apply Rotation
+            row = col.row()  # Create a new row for the apply buttons
+
+            # Apply Rotation only  
+            sub_row = row.row()
+            op = sub_row.operator("object.transform_apply", text="Apply Rotation")
+            op.location = False
+            op.rotation = True
+            op.scale = False
+
+            # Apply Scale only
+            sub_row = row.row()
+            op = sub_row.operator("object.transform_apply", text="Apply Scale")
+            op.location = False
+            op.rotation = False
+            op.scale = True
+
+                        
             
             col.separator()
             col.label(text="Reset Selected Transforms:")    
             
+            
+            # Combined Reset Button
+            row = col.row()
+            row.scale_y = 1.35
+            row.operator("object.reset_transforms", text="Reset Rotation & Scale")
+            
+            col.separator()
             # New section: Reset Rotation & Reset Scale
             row = col.row()  # Create a new row for the reset buttons
-            
+
             # Reset Rotation
             sub_row = row.row()
             sub_row.operator("object.rotation_clear", text="Reset Rotation (Alt + R)").clear_delta = False
@@ -736,9 +1072,8 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             # Reset Scale
             sub_row = row.row()
             sub_row.operator("object.scale_clear", text="Reset Scale (Alt + S)").clear_delta = False           
-            col.separator()
-            # Combined Reset Button
-            col.operator("object.reset_transforms", text="Reset Rotation & Scale")
+            
+            
             
             if scene.show_help_general:
                 col.label(text="• Reset Rotation: Straightens object")
@@ -849,21 +1184,23 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             if scene.show_help_edit_mode:    
                 col.label(text="• Add Solidify Modifier")
             
-            col.label(text="• Subdiv Modifier set to level 1, 2, 3 ")
+            col.separator()
+            col.separator()
+            col.label(text="Sub-Division Modifier: Level 1, 2, 3 ")
             
-            op = col.operator("object.subdivision_set", text="Create Level 1 Modifier (Ctrl + 1)")
+            op = col.operator("object.subdivision_set", text="Sub Divide Mesh Level 1 (Ctrl + 1)")
             op.level = 1
             op.relative = False
             if scene.show_help_edit_mode:    
                 col.label(text="• Create Modifier = Level 1")
 
-            col.operator("object.subdivision_set", text="Create Level 2 Modifier (Ctrl + 2)")
+            col.operator("object.subdivision_set", text="Sub Divide Mesh Level 2 (Ctrl + 2)")
             op.level = 2
             op.relative = False
             if scene.show_help_edit_mode:    
                 col.label(text="• Create Modifier = Level 2")
             
-            col.operator("object.subdivision_set", text="Create Level 3 Modifier (Ctrl + 3)")
+            col.operator("object.subdivision_set", text="Sub Divide Mesh Level 3 (Ctrl + 3)")
             op.level = 3
             op.relative = False
             if scene.show_help_edit_mode:    
@@ -1173,6 +1510,13 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         
         if scene.show_camera:
             col = box.column(align=True)
+            
+            col.separator()
+            # ADVANCED NAVIGATION
+            col.label(text="Advanced Navigation:")
+            col.operator("view3d.walk", text="Walk Mode (Shift + `)")
+            
+            
             
             # CAMERA LOCK (Advanced but Important)
             col.label(text="Camera Lock:")
@@ -1508,6 +1852,14 @@ classes = (
     SHORTCUTS_OT_SetUnits,
     SHORTCUTS_OT_ObjectMode,
     SHORTCUTS_OT_EditMode,
+    SHORTCUTS_OT_CursorToGeometryCenter,
+    SHORTCUTS_OT_ObjectGeometryToCursor,
+    MESH_OT_front_origin_to_cursor,
+    MESH_OT_back_origin_to_cursor,
+    MESH_OT_top_origin_to_cursor,
+    MESH_OT_bottom_origin_to_cursor, 
+    MESH_OT_left_origin_to_cursor,
+    MESH_OT_right_origin_to_cursor,
     OBJECT_OT_reset_transforms,
     MESH_OT_smart_snap_vertex,
     MESH_OT_smart_snap_edge,
