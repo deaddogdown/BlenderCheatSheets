@@ -1,12 +1,238 @@
 import bpy
-from bpy.props import BoolProperty
-from bpy.props import EnumProperty
+from bpy.props import BoolProperty, EnumProperty, FloatVectorProperty, PointerProperty
 from mathutils import Matrix, Vector
+from bpy.app.handlers import persistent
+
+
+import bpy
+from bpy.props import EnumProperty, FloatVectorProperty
+from bpy.app.handlers import persistent
+
+# ==============================================================================
+# CORE FUNCTIONALITY - All logic contained here
+# ==============================================================================
+
+@persistent
+def sync_viewport_properties(dummy):
+    """Sync custom properties with actual theme values on file load"""
+    try:
+        theme = bpy.context.preferences.themes['Default']
+        theme_3d = theme.view_3d
+        
+        high_color = theme_3d.space.gradients.high_gradient
+        low_color = theme_3d.space.gradients.gradient
+        
+        bg_type = 'SOLID'
+        for area in bpy.context.screen.areas:
+            if area.type == 'VIEW_3D':
+                shading = area.spaces.active.shading
+                if shading.background_type == 'THEME':
+                    if high_color == low_color:
+                        bg_type = 'SOLID'
+                    else:
+                        bg_type = 'GRADIENT'
+                elif shading.background_type == 'WORLD':
+                    bg_type = 'WORLD'
+                elif shading.background_type == 'VIEWPORT':
+                    bg_type = 'VIEWPORT'
+                break
+        
+        if hasattr(bpy.context.scene, 'viewport_theme'):
+            bpy.context.scene.viewport_theme.bg_type = bg_type
+            bpy.context.scene.viewport_theme.bg_color_high = high_color
+            bpy.context.scene.viewport_theme.bg_color_low = low_color
+            
+    except Exception as e:
+        print(f"Error syncing viewport properties: {e}")
+
+def update_background_color(self, context):
+    """Update callback for background color properties"""
+    for area in context.screen.areas:
+        if area.type == 'VIEW_3D':
+            shading = area.spaces.active.shading
+            shading.background_type = 'THEME'
+            
+            theme = context.preferences.themes['Default']
+            theme_3d = theme.view_3d
+            
+            if self.bg_type == 'SOLID':
+                theme_3d.space.gradients.high_gradient = self.bg_color_high
+                theme_3d.space.gradients.gradient = self.bg_color_high
+            elif self.bg_type == 'GRADIENT':
+                theme_3d.space.gradients.high_gradient = self.bg_color_high
+                theme_3d.space.gradients.gradient = self.bg_color_low
+            elif self.bg_type == 'LINEAR':
+                theme_3d.space.gradients.high_gradient = self.bg_color_high
+                theme_3d.space.gradients.gradient = self.bg_color_low
+            elif self.bg_type == 'WORLD':
+                shading.background_type = 'WORLD'
+            elif self.bg_type == 'VIEWPORT':
+                shading.background_type = 'VIEWPORT'
+    
+    for area in context.screen.areas:
+        area.tag_redraw()
+    
+    try:
+        bpy.ops.wm.save_userpref()
+    except:
+        pass
+
+# ==============================================================================
+# PROPERTY GROUPS - Data containers only
+# ==============================================================================
+
+class ViewportThemeSettings(bpy.types.PropertyGroup):
+    bg_type: EnumProperty(
+        name="Background Type",
+        items=[
+            ('SOLID', 'Solid', 'Solid background color'),
+            ('GRADIENT', 'Gradient', 'Gradient background'),
+            ('LINEAR', 'Linear', 'Linear gradient background'),
+            ('WORLD', 'World', 'Use world background'),
+            ('VIEWPORT', 'Viewport', 'Use viewport background')
+        ],
+        default='SOLID',
+        update=update_background_color
+    )
+    bg_color_high: FloatVectorProperty(
+        name="High Color",
+        subtype='COLOR',
+        size=3,
+        min=0.0,
+        max=1.0,
+        default=(0.6, 0.6, 0.6),
+        update=update_background_color
+    )
+    bg_color_low: FloatVectorProperty(
+        name="Low Color",
+        subtype='COLOR',
+        size=3,
+        min=0.0,
+        max=1.0,
+        default=(0.4, 0.4, 0.4),
+        update=update_background_color
+    )
+
+# ==============================================================================
+# OPERATORS - Actions only
+# ==============================================================================
+
+class VIEW3D_OT_save_startup_settings(bpy.types.Operator):
+    bl_idname = "view3d.save_startup_settings"
+    bl_label = "Save Settings"
+    bl_description = "Save current settings as startup defaults"
+    bl_options = {'REGISTER'}
+    
+    def execute(self, context):
+        try:
+            bpy.ops.wm.save_userpref()
+            self.report({'INFO'}, "Settings saved as startup defaults")
+        except Exception as e:
+            self.report({'ERROR'}, f"Failed to save settings: {e}")
+        return {'FINISHED'}
+
+class VIEW3D_OT_reset_viewport_background(bpy.types.Operator):
+    bl_idname = "view3d.reset_viewport_background"
+    bl_label = "Reset Viewport Background"
+    bl_description = "Reset viewport background to default"
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+        default_bg_type = 'SOLID'
+        default_high = (0.6, 0.6, 0.6)
+        default_low = (0.4, 0.4, 0.4)
+        
+        context.scene.viewport_theme.bg_type = default_bg_type
+        context.scene.viewport_theme.bg_color_high = default_high
+        context.scene.viewport_theme.bg_color_low = default_low
+        
+        for area in context.screen.areas:
+            if area.type == 'VIEW_3D':
+                shading = area.spaces.active.shading
+                shading.background_type = 'THEME'
+                
+                theme = context.preferences.themes['Default']
+                theme_3d = theme.view_3d
+                theme_3d.space.gradients.high_gradient = default_high
+                theme_3d.space.gradients.gradient = default_high
+        
+        for area in context.screen.areas:
+            area.tag_redraw()
+        
+        try:
+            bpy.ops.wm.save_userpref()
+        except:
+            pass
+            
+        return {'FINISHED'}
+
+# ==============================================================================
+# REGISTRATION - Module management only
+# ==============================================================================
+
+def register_viewport_theme():
+    """Register viewport theme classes and properties"""
+    try:
+        bpy.utils.register_class(ViewportThemeSettings)
+    except ValueError:
+        pass
+    
+    try:
+        bpy.utils.register_class(VIEW3D_OT_reset_viewport_background)
+    except ValueError:
+        pass
+    
+    try:
+        bpy.utils.register_class(VIEW3D_OT_save_startup_settings)
+    except ValueError:
+        pass
+    
+    if not hasattr(bpy.types.Scene, 'viewport_theme'):
+        bpy.types.Scene.viewport_theme = bpy.props.PointerProperty(type=ViewportThemeSettings)
+    
+    if sync_viewport_properties not in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.append(sync_viewport_properties)
+
+def unregister_viewport_theme():
+    """Unregister viewport theme classes and properties"""
+    if sync_viewport_properties in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.remove(sync_viewport_properties)
+    
+    if hasattr(bpy.types.Scene, 'viewport_theme'):
+        del bpy.types.Scene.viewport_theme
+    
+    try:
+        bpy.utils.unregister_class(VIEW3D_OT_save_startup_settings)
+    except RuntimeError:
+        pass
+    
+    try:
+        bpy.utils.unregister_class(VIEW3D_OT_reset_viewport_background)
+    except RuntimeError:
+        pass
+    
+    try:
+        bpy.utils.unregister_class(ViewportThemeSettings)
+    except RuntimeError:
+        pass
+
 
 
 
 # Register collapsible section properties
 def register_properties():
+
+    bpy.types.Scene.bg_color = FloatVectorProperty(
+        name="Background Color",
+        subtype='COLOR',
+        size=3,
+        min=0.0,
+        max=1.0,
+        default=(0.2, 0.2, 0.2),
+        update=update_background_color
+    )
+
+
     props = [
 
         ('show_general', False),
@@ -22,7 +248,7 @@ def register_properties():
         ('show_render', False),
         ('show_about', False),
         #
-        #('shortcuts_show_help', False),
+        
         ('show_help_general', False),
         ('show_help_viewport', False),
         ('show_help_transform', False),
@@ -35,6 +261,8 @@ def register_properties():
         ('show_help_camera', False),
         ('show_help_render', False),
         ('show_help_about', False),
+        
+        
     ]
     for prop_name, default in props:
         setattr(bpy.types.Scene, prop_name, bpy.props.BoolProperty(
@@ -42,6 +270,7 @@ def register_properties():
             description=f"Toggle {prop_name.replace('show_', '').title()} section",
             default=default
         ))
+
 
 def unregister_properties():
     props = [
@@ -59,7 +288,7 @@ def unregister_properties():
         'show_render',
         'show_about'
         #
-        #'shortcuts_show_help',
+
         'show_help_general',
         'show_help_viewport',
         'show_help_transform',
@@ -72,10 +301,18 @@ def unregister_properties():
         'show_help_camera',
         'show_help_render',
         'show_help_about',
+        
+        'bg_color',
+        
+        
     ]
     for prop in props:
         if hasattr(bpy.types.Scene, prop):
             delattr(bpy.types.Scene, prop)
+
+
+
+
 
 def get_object_center(obj):
     """
@@ -171,6 +408,49 @@ def move_origin_point_to_cursor(direction='BOTTOM'):
     obj.location += delta
 
     return True
+
+class VIEW3D_OT_reset_background_color(bpy.types.Operator):
+    bl_idname = "view3d.reset_background_color"
+    bl_label = "Reset Background Color"
+    bl_description = "Reset viewport background color to default"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        default_color = (0.6, 0.6, 0.6)  # default Blender gray
+        context.scene.bg_color = default_color
+
+        for area in context.screen.areas:
+            if area.type == 'VIEW_3D':
+                shading = area.spaces[0].shading
+                shading.background_color = default_color
+
+        return {'FINISHED'}
+
+class VIEW3D_OT_enable_xray(bpy.types.Operator):
+    bl_idname = "view3d.enable_xray"
+    bl_label = "Enable X-Ray"
+    bl_description = "Enable X-Ray view shading in the current 3D Viewport"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        if context.space_data:
+            context.space_data.shading.show_xray = True
+        else:
+            self.report({'WARNING'}, "Not a 3D Viewport")
+        return {'FINISHED'}
+
+class VIEW3D_OT_disable_xray(bpy.types.Operator):
+    bl_idname = "view3d.disable_xray"
+    bl_label = "Disable X-Ray"
+    bl_description = "Disable X-Ray view shading in the current 3D Viewport"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        if context.space_data:
+            context.space_data.shading.show_xray = False
+        else:
+            self.report({'WARNING'}, "Not a 3D Viewport")
+        return {'FINISHED'}
 
 
 class MESH_OT_top_origin_to_cursor(bpy.types.Operator):
@@ -442,14 +722,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
         
-        #layout.label(text=f"Help Enabled: {scene.shortcuts_show_help}")
-        # Help toggle at top
-        #row = layout.row()
-        #row.scale_y = 1.2
-        #if scene.shortcuts_show_help:
-            #row.prop(scene, "shortcuts_show_help", text="BEGINNER USER", icon='HIDE_ON')
-        #else:
-            #row.prop(scene, "shortcuts_show_help", text="ADVANCED USER", icon='HELP')
+
 
         # Mode switch buttons at the top with visual feedback
         row = layout.row()
@@ -470,9 +743,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         sub_row.operator("object.switch_to_edit_mode", text="Edit Mode", icon='EDITMODE_HLT')
         
         
-        #if scene.shortcuts_show_help:
-            #layout.separator()
-            #layout.label(text="Common Commands:")    
+   
 
         # 🧩 General
         box = layout.box()
@@ -480,7 +751,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         row.prop(scene, "show_general", text="GENERAL", emboss=False, icon='INFO')
         
         # Help toggle specific to this section
-        #if scene.shortcuts_show_help:
+
         row.prop(scene, "show_help_general", text="", icon='HELP' if scene.show_help_general else 'HIDE_ON', toggle=True)
 
 
@@ -515,14 +786,34 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                     col.label(text="• Common in USA architecture/design")
             
             
+            # INPUT SETTINGS (Less common but useful)
             col.separator()
             col.separator()
-        
+            col.label(text="Input:")
+            if hasattr(context.preferences.inputs, 'use_mouse_emulate_3_button'):
+                col.prop(context.preferences.inputs, "use_mouse_emulate_3_button", text="Emulate 3 Button Mouse")
+            col.prop(context.preferences.view, "smooth_view", text="Smooth View Transitions")
             
-            col.label(text="Useful Commands:")    
+            # THE WHY - What is the Viewport?
+            if scene.show_help_viewport:
+                col.label(text="Viewport = Your 3D Window")
+                col.label(text="Navigate (move yourself) vs Transform (move objects)")
+                col.separator()
+                
+                # MOUSE NAVIGATION (Most Important - Put First)
+                col.label(text="Mouse Navigation:")
+                col.label(text="• Orbit: Middle Mouse Button (MMB) Drag")
+                col.label(text="• Pan: Shift + MMB Drag") 
+                col.label(text="• Zoom: Scroll Wheel or Ctrl + MMB Drag")
+            
+            
+            
+            col.separator()
+            col.separator()
+            col.label(text="Search for Commands:")    
             row = col.row()
             row.scale_y = 1.35
-            row.operator("wm.search_menu", text="Search Operators: F3 or Spacebar")
+            row.operator("wm.search_menu", text="Search Operators: (F3)")
             
             
             # Info labels for shortcuts that don't need operators:
@@ -552,14 +843,14 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             
             col.separator()
             # ADVANCED NAVIGATION
-            col.label(text="Advanced Navigation:")
+            col.label(text="First Person Navigation:")
             row = col.row()
             row.scale_y = 1.35
             # Transform Orientation buttons with visual feedback
             row.operator("view3d.walk", text="Walk Mode (Shift + `)")
             
             col.separator()
-            col.label(text="Global/Local:")
+            col.label(text="Global/Local Reference Frame:")
             # Transform Orientation buttons with visual feedback
 
             row = col.row()
@@ -583,35 +874,35 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             op.data_path = "scene.transform_orientation_slots[0].type"
             op.value = 'LOCAL'
             
-            # VIEWPORT SETTINGS (Less common but useful)
             col.separator()
             col.separator()
-            col.label(text="Viewport Settings:")
-            if hasattr(context.preferences.inputs, 'use_mouse_emulate_3_button'):
-                col.prop(context.preferences.inputs, "use_mouse_emulate_3_button", text="Emulate 3 Button Mouse")
-            col.prop(context.preferences.view, "smooth_view", text="Smooth View Transitions")
+            # CAMERA OPERATIONS
+            col.label(text="Camera:")
+            col.operator("view3d.view_camera", text="Toggle Camera View (Numpad 0)")
+            if context.scene.camera:
+                col.operator("view3d.camera_to_view_selected", text="Align Camera to View (Ctrl + Alt + Numpad 0)")
+                row = col.row()
+                row.prop(context.space_data, "lock_camera", text="Lock Camera to View")
+            else:
+                col.label(text="No active camera in scene")
             
-            # THE WHY - What is the Viewport?
-            if scene.show_help_viewport:
-                col.label(text="Viewport = Your 3D Window")
-                col.label(text="Navigate (move yourself) vs Transform (move objects)")
-                col.separator()
-                
-                # MOUSE NAVIGATION (Most Important - Put First)
-                col.label(text="Mouse Navigation:")
-                col.label(text="• Orbit: Middle Mouse Button (MMB) Drag")
-                col.label(text="• Pan: Shift + MMB Drag") 
-                col.label(text="• Zoom: Scroll Wheel or Ctrl + MMB Drag")
+            
             
             col.separator()
             col.separator()
             # QUICK NAVIGATION (High frequency)
-            col.label(text="Quick Navigation:")
+            col.label(text="Quick View:")
             col.operator("view3d.view_all", text="Frame All Objects (Home)")
             col.operator("view3d.view_selected", text="Frame Selected (Numpad .)")
             col.operator("view3d.snap_cursor_to_center", text="Reset View Focus (Shift + C)")
             col.operator("wm.context_toggle", text="Wireframe Overlay Toggle", icon='SHADING_WIRE').data_path = "space_data.overlay.show_wireframes"
+            #col.operator("wm.context_toggle", text="X-Ray Mode Toggle (Edit mode)", icon='XRAY').data_path = "space_data.shading.show_xray"
+            #row = col.row()
+            #row.operator("view3d.enable_xray", text="Enable X-Ray", icon='XRAY')
+            #row.operator("view3d.disable_xray", text="Disable X-Ray", icon='PANEL_CLOSE')
             col.operator("wm.context_toggle", text="X-Ray Mode Toggle (Edit mode)", icon='XRAY').data_path = "space_data.shading.show_xray"
+            
+            
             
             
             col.separator()
@@ -629,22 +920,27 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             
             col.operator("view3d.view_persportho", text="Perspective/Orthographic (5)")
             
-            
+   
             
             col.separator()
             col.separator()
-            # CAMERA OPERATIONS
-            col.label(text="Camera:")
-            col.operator("view3d.view_camera", text="Toggle Camera View (Numpad 0)")
-            if context.scene.camera:
-                col.operator("view3d.camera_to_view_selected", text="Align Camera to View (Ctrl + Alt + Numpad 0)")
+            col.label(text="Viewport Background", icon='VIEW3D')
+            row = col.row()
+            row.prop(context.scene.viewport_theme, "bg_type")
+
+            if context.scene.viewport_theme.bg_type in {'SOLID', 'GRADIENT', 'LINEAR'}:
                 row = col.row()
-                row.prop(context.space_data, "lock_camera", text="Lock Camera to View")
-            else:
-                col.label(text="No active camera in scene")
+                row.prop(context.scene.viewport_theme, "bg_color_high")
+                if context.scene.viewport_theme.bg_type in {'GRADIENT', 'LINEAR'}:
+                    row.prop(context.scene.viewport_theme, "bg_color_low")
+
+            row = col.row()
+            row.operator("view3d.reset_viewport_background", text="Reset", icon='LOOP_BACK')
+            #if hasattr(bpy.ops.view3d, 'save_startup_settings'):
+            row.operator("wm.save_userpref", text="Save", icon='FILE_TICK')
+            col.separator()
+            col.separator()
             
-            col.separator()
-            col.separator()
 
 
         # 🧩 Transform
@@ -656,6 +952,17 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         
         if scene.show_transform:
             col = box.column(align=True)
+            
+            
+            
+            # Selection status button
+            status_row = col.row()
+            if context.selected_objects:
+                status_row.alert = True
+                status_row.label(text="Objects Selected - Tools Active", icon='OBJECT_DATAMODE')
+            else:
+                status_row.label(text="No Objects Selected - Select Something First", icon='RESTRICT_SELECT_ON')
+            
             
             # THE WHY - What is Transform?
             if scene.show_help_transform:
@@ -670,6 +977,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             row.operator("transform.translate", text="Move (G)")
             row.operator("transform.rotate", text="Rotate (R)")
             row.operator("transform.resize", text="Scale (S)")
+            col.label(text="• Move selected along surface (gg)")
             
             # CONSTRAINT HELPERS
             if scene.show_help_transform:
@@ -677,12 +985,19 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                 col.label(text="• X-axis only: X • Y-axis only: Y • Z-axis only: Z")
                 col.label(text="• Local axes: XX, YY, ZZ")
                 
+            col.separator()
+            col.label(text="Proportional Editing:")
+            #col.operator("wm.context_toggle", text="Toggle Proportional Editing (O)", icon='PROP_ON').data_path = "tool_settings.use_proportional_edit_objects"
+            prop_edit = context.tool_settings.use_proportional_edit_objects
+            icon = 'PROP_ON' if prop_edit else 'PROP_OFF'
+            col.prop(context.tool_settings, "use_proportional_edit_objects", text="Toggle Proportional Editing (O)", icon=icon, toggle=True)
+            
+            
             col.separator()  
             # ADVANCED HELPERS
-            col.label(text="Enable Snapping:")
+            col.label(text="Snapping:")
             col.prop(context.tool_settings, "use_snap", text="Enable Snapping (SHIFT + TAB)") 
             # Smart Snaps section
- 
             col.separator()
             col.label(text="Smart Snaps:")
             col.operator("mesh.smart_snap", text="Smart Snap", icon='SNAP_VERTEX')
@@ -691,13 +1006,9 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.operator("mesh.smart_snap_vertex", text="Smart Snap to Vertex", icon='VERTEXSEL')
             col.operator("mesh.smart_snap_edge", text="Smart Snap to Edge Mid", icon='EDGESEL') 
             col.operator("mesh.smart_snap_face", text="Smart Snap to Face Center", icon='FACESEL')
+            col.separator()
+            col.separator()
             
-            col.separator()
-            col.label(text="Proportional Editing:")
-            col.operator("wm.context_toggle", text="Toggle Proportional Editing (O)", icon='PROP_ON').data_path = "tool_settings.use_proportional_edit_objects"
-            
-            col.separator()
-            col.separator()
             
             
         # 🧩 3D Cursor
@@ -709,6 +1020,8 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         
         if scene.show_cursor:
             col = box.column(align=True)
+            
+            
             
             # Selection status button
             status_row = col.row()
@@ -797,6 +1110,8 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         if scene.show_world_origin:
             col = box.column(align=True)
             
+            
+            
             # THE WHY - What is World Origin?
             if scene.show_help_world_origin:
                 col.label(text="World Origin = The Center of Your 3D Space")
@@ -848,6 +1163,8 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col = box.column(align=True)
             is_edit_mode = bpy.context.mode == 'EDIT_MESH'        
             
+            
+            
             # Selection status button
             status_row = col.row()
             if context.selected_objects:
@@ -863,7 +1180,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                 col.label(text="Rotation • Scaling • Position for the selected object")
                 col.separator()
             
-            col.label(text="VIEWING CONTROLS:")
+            col.label(text="VIEWING ORIGINS:")
             # Add this at the top of Object Origin section:
             
             col.prop(context.space_data.overlay, "show_object_origins", text="Show All Object Origins")
@@ -872,22 +1189,24 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             
             col.separator()
             col.separator()
-            # Add these explanatory operations:
-            col.label(text="Find & See Origins:")
-            col.operator("view3d.view_selected", text="Focus View on Selected Object (Period .)")
-            
-            col.separator()
-            col.separator()
             col.label(text="OBJECT ORIGIN TOOLS:")
             
-            col.label(text="Object Origin Placement Options:")
+            col.separator()
+            # Object Origin ↔ Global Zero
+            col.label(text="Object Origin ↔ World Zero:")
+            row = col.row()
+            row.scale_y = 1.35
+            row.operator("mesh.origin_to_global_zero", text="Object Origin to World Zero")
+            row.enabled = not is_edit_mode
+            
+            col.label(text="Object Origin:")
             col.operator("object.origin_set", text="Origin to Center of Mass").type = 'ORIGIN_CENTER_OF_MASS'
             col.operator("object.origin_set", text="Origin to Bounding Box Center").type = 'ORIGIN_CENTER_OF_VOLUME'
             #col.operator("object.origin_set", text="Origin to Bottom of Object").type = 'ORIGIN_GEOMETRY'
             col.operator("mesh.origin_to_bottom", text="Origin to Bottom of Object")
             col.separator()
             
-            col.label(text="ORIGIN POSITION:")
+            col.label(text="Object to Face:")
             if scene.show_help_object_origin:
                 col.label(text="Select your object first")
                 col.label(text="Shift + RMB to place your cursor")
@@ -896,28 +1215,14 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
 
 
             col.operator("mesh.top_origin_to_cursor", text="Top Origin to 3D Cursor")
-            
-            col.separator()
             col.operator("mesh.bottom_origin_to_cursor", text="Bottom Origin to 3D Cursor")
-            
-            col.separator()
             col.operator("mesh.front_origin_to_cursor", text="Front Origin to 3D Cursor")
-            
-            col.separator()
             col.operator("mesh.back_origin_to_cursor", text="Back Origin to 3D Cursor")
-            
-            col.separator()
             col.operator("mesh.left_origin_to_cursor", text="Left Origin to 3D Cursor")
-            
-            col.separator()
             col.operator("mesh.right_origin_to_cursor", text="Right Origin to 3D Cursor")
             
  
-            col.separator()
-            # Object Origin ↔ Global Zero
-            col.label(text="Object Origin ↔ World Zero:")
-            col.operator("mesh.origin_to_global_zero", text="Object Origin to World Zero")
-            col.enabled = not is_edit_mode
+            
             
             col.separator()
             col.separator()
@@ -953,6 +1258,16 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
 
         if scene.show_primitives:
             col = box.column(align=True)
+            
+            
+            
+             # Selection status button
+            status_row = col.row()
+            if context.selected_objects:
+                status_row.alert = True
+                status_row.label(text="Objects Selected - Tools Active", icon='OBJECT_DATAMODE')
+            else:
+                status_row.label(text="No Objects Selected - Select Something First", icon='RESTRICT_SELECT_ON')
             
             if scene.show_help_primitives:
                 col.label(text="Basic shapes to start modeling with:")
@@ -1007,13 +1322,33 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         if scene.show_object_mode:
             col = box.column(align=True)
             
-            # Selection status button
+            # Mode switch buttons at the top with visual feedback
+            row = col.row()
+            row.scale_y = 1.0
+            obj = context.object
+            current_mode = obj.mode if obj else 'OBJECT'
+            
+            # Object Mode button
+            sub_row = row.row()
+            if current_mode == 'OBJECT':
+                sub_row.alert = True
+            sub_row.operator("object.switch_to_object_mode", text="Object Mode", icon='OBJECT_DATAMODE')
+            
+            # Edit Mode button
+            sub_row = row.row()
+            if current_mode == 'EDIT':
+                sub_row.alert = True
+            sub_row.operator("object.switch_to_edit_mode", text="Edit Mode", icon='EDITMODE_HLT')
+            
+            col.separator()
+             # Selection status button
             status_row = col.row()
             if context.selected_objects:
                 status_row.alert = True
                 status_row.label(text="Objects Selected - Tools Active", icon='OBJECT_DATAMODE')
             else:
                 status_row.label(text="No Objects Selected - Select Something First", icon='RESTRICT_SELECT_ON')
+
             
             # THE WHY - What is Object Mode?
             if scene.show_help_object_mode:
@@ -1243,6 +1578,35 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         if scene.show_edit_mode:
             col = box.column(align=True)
             
+            
+            # Mode switch buttons at the top with visual feedback
+            row = col.row()
+            row.scale_y = 1.0
+            obj = context.object
+            current_mode = obj.mode if obj else 'OBJECT'
+            
+            # Object Mode button
+            sub_row = row.row()
+            if current_mode == 'OBJECT':
+                sub_row.alert = True
+            sub_row.operator("object.switch_to_object_mode", text="Object Mode", icon='OBJECT_DATAMODE')
+            
+            # Edit Mode button
+            sub_row = row.row()
+            if current_mode == 'EDIT':
+                sub_row.alert = True
+            sub_row.operator("object.switch_to_edit_mode", text="Edit Mode", icon='EDITMODE_HLT')
+            
+            col.separator()
+             # Selection status button
+            status_row = col.row()
+            if context.selected_objects:
+                status_row.alert = True
+                status_row.label(text="Objects Selected - Tools Active", icon='OBJECT_DATAMODE')
+            else:
+                status_row.label(text="No Objects Selected - Select Something First", icon='RESTRICT_SELECT_ON')
+                
+                
             # Selection status for Edit Mode
             # Selection status for Edit Mode
             # Selection status for Edit Mode
@@ -1511,6 +1875,14 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         if scene.show_camera:
             col = box.column(align=True)
             
+             # Selection status button
+            status_row = col.row()
+            if context.selected_objects:
+                status_row.alert = True
+                status_row.label(text="Objects Selected - Tools Active", icon='OBJECT_DATAMODE')
+            else:
+                status_row.label(text="No Objects Selected - Select Something First", icon='RESTRICT_SELECT_ON')
+            
             col.separator()
             # ADVANCED NAVIGATION
             col.label(text="Advanced Navigation:")
@@ -1660,7 +2032,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.prop(context.scene.render, "resolution_x", text="Width")
             col.prop(context.scene.render, "resolution_y", text="Height")
             col.prop(context.scene.render, "resolution_percentage", text="Quality %")
-            if scene.shortcuts_show_help:
+            if scene.show_help_render:
                 col.label(text="• 100% = Full quality, 50% = Half size")
             
             col.separator()
@@ -1686,7 +2058,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             # VIEWPORT RENDER
             col.label(text="Quick Preview:")
             col.operator("render.opengl", text="Viewport Render (Current View)")
-            if scene.shortcuts_show_help:
+            if scene.show_help_render:
                 col.label(text="• Fast render of current viewport")
             
             col.separator()
@@ -1865,15 +2237,18 @@ classes = (
     MESH_OT_smart_snap_edge,
     MESH_OT_smart_snap_face,
     MESH_OT_smart_snap,
+    VIEW3D_OT_enable_xray,
+    VIEW3D_OT_disable_xray,
+    VIEW3D_OT_reset_viewport_background,
 )
 
+
+                
 def register():
-    # Add the help toggle property to the scene FIRST
-    bpy.types.Scene.shortcuts_show_help = BoolProperty(
-        name="Show Help Text",
-        description="Show or hide helpful descriptions for beginners",
-        default=True  # Default to showing help for new users
-    )
+    
+    bpy.utils.register_class(ViewportThemeSettings)
+    bpy.types.Scene.viewport_theme = PointerProperty(type=ViewportThemeSettings)
+
     
     register_properties()
     for cls in classes:
@@ -1882,10 +2257,15 @@ def register():
 def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
+    
+    del bpy.types.Scene.viewport_theme
+    bpy.utils.unregister_class(ViewportThemeSettings)
+    
+    if hasattr(bpy.types.Scene, 'bg_color'):
+        del bpy.types.Scene.bg_color
+         
         
-    # Remove the property when unregistering
-    if hasattr(bpy.types.Scene, 'shortcuts_show_help'):
-        del bpy.types.Scene.shortcuts_show_help    
+        
     unregister_properties()
 
 if __name__ == "__main__":
