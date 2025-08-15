@@ -2,11 +2,10 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatVectorProperty, PointerProperty
 from mathutils import Matrix, Vector
 from bpy.app.handlers import persistent
-
-
-import bpy
-from bpy.props import EnumProperty, FloatVectorProperty
-from bpy.app.handlers import persistent
+import bgl, blf, gpu
+from gpu_extras.batch import batch_for_shader
+import bpy_extras as view3d_utils
+from bpy_extras.view3d_utils import region_2d_to_origin_3d, region_2d_to_vector_3d
 
 # ==============================================================================
 # CORE FUNCTIONALITY - All logic contained here
@@ -112,6 +111,38 @@ class ViewportThemeSettings(bpy.types.PropertyGroup):
         default=(0.4, 0.4, 0.4),
         update=update_background_color
     )
+
+class SetMatcapClay(bpy.types.Operator):
+    bl_idname = "cheatsheets.set_matcap_clay"
+    bl_label = "Set MATCAP Clay"
+    bl_description = "Switch to solid shading with clay MATCAP"
+    
+    def execute(self, context):
+        space = context.space_data
+        if space.type == 'VIEW_3D':
+            # Ensure we're in solid shading mode
+            space.shading.type = 'SOLID'
+            # Set lighting to MATCAP
+            space.shading.light = 'MATCAP'
+            # Set the specific MATCAP
+            space.shading.studio_light = 'basic_2.exr'
+        return {'FINISHED'}
+
+class SetMatcapReflective(bpy.types.Operator):
+    bl_idname = "cheatsheets.set_matcap_reflective"
+    bl_label = "Set MATCAP Reflective"
+    bl_description = "Switch to solid shading with reflective MATCAP"
+    
+    def execute(self, context):
+        space = context.space_data
+        if space.type == 'VIEW_3D':
+            # Ensure we're in solid shading mode
+            space.shading.type = 'SOLID'
+            # Set lighting to MATCAP
+            space.shading.light = 'MATCAP'
+            # Set the specific MATCAP
+            space.shading.studio_light = 'metal_carpaint.exr'
+        return {'FINISHED'}
 
 # ==============================================================================
 # OPERATORS - Actions only
@@ -408,6 +439,21 @@ def move_origin_point_to_cursor(direction='BOTTOM'):
     obj.location += delta
 
     return True
+    
+class MESH_OT_toggle_proportional_edit(bpy.types.Operator):
+    """Toggle Proportional Editing for current mode"""
+    bl_idname = "mesh.toggle_proportional_edit"
+    bl_label = "Toggle Proportional Editing"
+    
+    def execute(self, context):
+        if context.mode == 'OBJECT':
+            context.tool_settings.use_proportional_edit_objects = not context.tool_settings.use_proportional_edit_objects
+        else:
+            # For edit modes (EDIT_MESH, EDIT_CURVE, etc.)
+            context.tool_settings.use_proportional_edit = not context.tool_settings.use_proportional_edit
+        
+        return {'FINISHED'}
+
 
 class VIEW3D_OT_reset_background_color(bpy.types.Operator):
     bl_idname = "view3d.reset_background_color"
@@ -524,6 +570,88 @@ class MESH_OT_right_origin_to_cursor(bpy.types.Operator):
             self.report({'WARNING'}, "Operation failed")
             return {'CANCELLED'}
         return {'FINISHED'}
+
+class MESH_OT_drag_along_floor(bpy.types.Operator):
+    bl_idname = "mesh.drag_along_floor"
+    bl_label = "Drag Along Floor"
+    bl_description = "Drag selected object along the floor or snap to other objects' top surfaces"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def invoke(self, context, event):
+        obj = context.active_object
+        if not obj or obj.type != 'MESH':
+            return {'CANCELLED'}
+        
+        self.base_location = obj.location.copy()
+        self.start_mouse_x = event.mouse_region_x
+        self.start_mouse_y = event.mouse_region_y
+
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+
+    def modal(self, context, event):
+        obj = context.active_object
+        if not obj or obj.type != 'MESH':
+            return {'CANCELLED'}
+
+        region = context.region
+        rv3d = context.region_data
+        coord = (event.mouse_region_x, event.mouse_region_y)
+
+        # Cast ray from mouse position
+        #ray_start = bpy.context.scene.cursor.matrix @ Vector((0, 0, 0))
+        #ray_dir = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
+        #ray_end = ray_start + ray_dir * 1000
+        # Cast ray from mouse position
+        
+        #ray_start = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
+        #ray_end = ray_start + (rv3d.view_rotation @ Vector((0, 0, -1))) * 1000
+        
+        
+        ray_start = region_2d_to_origin_3d(region, rv3d, coord)
+        ray_dir = region_2d_to_vector_3d(region, rv3d, coord)
+        ray_end = ray_start + ray_dir * 1000
+
+        result, location, normal, index, obj_hit, matrix = context.scene.ray_cast(context.evaluated_depsgraph_get(), ray_start, ray_dir)
+
+        if result and obj_hit != obj:
+            # Snap to top of hit object
+            obj.location = self.snap_to_top(obj, obj_hit)
+        else:
+            # Fallback: move along X and Y (horizontal plane)
+            dx = -(event.mouse_region_x - self.start_mouse_x) * 0.01
+            dy = -(event.mouse_region_y - self.start_mouse_y) * 0.01
+            obj.location.x = self.base_location.x + dx
+            obj.location.y = self.base_location.y + dy
+            obj.location.z = self.base_location.z  # Keep Z fixed
+
+        if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
+            return {'FINISHED'}
+
+        elif event.type in {'RIGHTMOUSE', 'ESC'}:
+            obj.location = self.base_location
+            return {'CANCELLED'}
+
+        return {'RUNNING_MODAL'}
+
+    def snap_to_top(self, source_obj, target_obj):
+        # Get bottom center of source object
+        source_bbox = [source_obj.matrix_world @ Vector(corner) for corner in source_obj.bound_box]
+        source_bottom_z = min(corner.z for corner in source_bbox)
+        source_center_x = sum(corner.x for corner in source_bbox) / 8
+        source_center_y = sum(corner.y for corner in source_bbox) / 8
+        source_origin = Vector((source_center_x, source_center_y, source_bottom_z))
+
+        # Get top center of target object
+        target_bbox = [target_obj.matrix_world @ Vector(corner) for corner in target_obj.bound_box]
+        target_top_z = max(corner.z for corner in target_bbox)
+        target_center_x = sum(corner.x for corner in target_bbox) / 8
+        target_center_y = sum(corner.y for corner in target_bbox) / 8
+        target_origin = Vector((target_center_x, target_center_y, target_top_z))
+
+        delta = target_origin - source_origin
+        source_obj.location += delta
+        return source_obj.location
 
 class SHORTCUTS_OT_CursorToGeometryCenter(bpy.types.Operator):
     bl_idname = "shortcuts.cursor_to_geometry_center"
@@ -717,15 +845,15 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = "CheatSheets"
     bl_label = "CheatSheets"
-
+    
     def draw(self, context):
         layout = self.layout
         scene = context.scene
         
-
-
+        layout.label(text="MODE SWITCH: (TAB)")
         # Mode switch buttons at the top with visual feedback
         row = layout.row()
+        
         row.scale_y = 1.5
         obj = context.object
         current_mode = obj.mode if obj else 'OBJECT'
@@ -742,9 +870,56 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             sub_row.alert = True
         sub_row.operator("object.switch_to_edit_mode", text="Edit Mode", icon='EDITMODE_HLT')
         
+        # Get current selection mode for edit mode feedback
+        select_mode = None
+        if current_mode == 'EDIT' and context.object and context.object.type == 'MESH':
+            select_mode = context.tool_settings.mesh_select_mode
+        
+        # G V - Move / Vertex
+        row = layout.row()
+        row.scale_y = 1.0
+        
+        # Move button - always visible
+        sub_row = row.row()
+        sub_row.operator("transform.translate", text="Move (G)")
+        
+        # Vertex button - always visible, grays out automatically in Object Mode
+        sub_row = row.row()
+        #if select_mode and select_mode[0]:  # Vertex mode active
+            #sub_row.alert = True
+        sub_row.operator("mesh.select_mode", text="Vertex (1)", icon='VERTEXSEL').type = 'VERT'
+        
+        # R E - Rotate / Edge
+        row = layout.row()
+        row.scale_y = 1.0
+        
+        # Rotate button - always visible
+        sub_row = row.row()
+        sub_row.operator("transform.rotate", text="Rotate (R)")
+        
+        # Edge button - always visible, grays out automatically in Object Mode
+        sub_row = row.row()
+        #if select_mode and select_mode[1]:  # Edge mode active
+            #sub_row.alert = True
+        sub_row.operator("mesh.select_mode", text="Edge (2)", icon='EDGESEL').type = 'EDGE'
+        
+        # S F - Scale / Face
+        row = layout.row()
+        row.scale_y = 1.0
+        
+        # Scale button - always visible
+        sub_row = row.row()
+        sub_row.operator("transform.resize", text="Scale (S)")
+        
+        # Face button - always visible, grays out automatically in Object Mode
+        sub_row = row.row()
+        #if select_mode and select_mode[2]:  # Face mode active
+            #sub_row.alert = True
+        sub_row.operator("mesh.select_mode", text="Face (3)", icon='FACESEL').type = 'FACE'
+        
         
    
-
+        
         # 🧩 General
         box = layout.box()
         row = box.row()
@@ -774,7 +949,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             # Newbie-friendly descriptions
             #layout.separator()
             if scene.show_help_general:
-                col.label(text="Unit Guide:")
+                col.label(text="UNIT GUIDE:")
                 if scene.unit_settings.system == 'NONE':
                     col.label(text="• None: Uses Blender's default units")
                     col.label(text="• Good for beginners learning basics")
@@ -789,7 +964,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             # INPUT SETTINGS (Less common but useful)
             col.separator()
             col.separator()
-            col.label(text="Input:")
+            col.label(text="INPUT:")
             if hasattr(context.preferences.inputs, 'use_mouse_emulate_3_button'):
                 col.prop(context.preferences.inputs, "use_mouse_emulate_3_button", text="Emulate 3 Button Mouse")
             col.prop(context.preferences.view, "smooth_view", text="Smooth View Transitions")
@@ -810,7 +985,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             
             col.separator()
             col.separator()
-            col.label(text="Search for Commands:")    
+            col.label(text="SEARCH: for Commands:")    
             row = col.row()
             row.scale_y = 1.35
             row.operator("wm.search_menu", text="Search Operators: (F3)")
@@ -843,14 +1018,14 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             
             col.separator()
             # ADVANCED NAVIGATION
-            col.label(text="First Person Navigation:")
+            col.label(text="FREE LOOK:")
             row = col.row()
             row.scale_y = 1.35
             # Transform Orientation buttons with visual feedback
             row.operator("view3d.walk", text="Walk Mode (Shift + `)")
             
             col.separator()
-            col.label(text="Global/Local Reference Frame:")
+            col.label(text="GLOBAL/LOCAL: Reference Frame")
             # Transform Orientation buttons with visual feedback
 
             row = col.row()
@@ -876,25 +1051,89 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             
             col.separator()
             col.separator()
+            # VIEWPORT MODES
+            col.label(text="VIEWPORT MODES:")
+            row = col.row()
+            row.scale_y = 1.0
+            op = row.operator("wm.context_set_enum", text="Wireframe")
+            op.data_path = "space_data.shading.type"
+            op.value = 'WIREFRAME'
+            op = row.operator("wm.context_set_enum", text="Solid")
+            op.data_path = "space_data.shading.type"
+            op.value = 'SOLID'
+            op = row.operator("wm.context_set_enum", text="Material")
+            op.data_path = "space_data.shading.type"
+            op.value = 'MATERIAL'
+            op = row.operator("wm.context_set_enum", text="Render")
+            op.data_path = "space_data.shading.type"
+            op.value = 'RENDERED'
+
+            # VIEWPORT FOV - Add this section:
+            col.separator()
+            col.separator()
+            col.label(text="VIEWPORT FOV:")
+
+            # Get 3D viewport
+            for area in context.screen.areas:
+                if area.type == 'VIEW_3D':
+                    space = area.spaces.active
+                    if space.type == 'VIEW_3D' and space.region_3d.view_perspective == 'PERSP':
+                        col.prop(space, "lens", text="Viewport FOV (mm)", slider=True)
+                        if scene.show_help_camera:  # Reuse your existing help toggle
+                            col.label(text="• Lower = Wider viewport view")
+                            col.label(text="• Higher = Narrower viewport view")
+                    else:
+                        col.label(text="Viewport FOV only in Perspective mode")
+                    break
+            
+            
+            col.separator()
+            col.separator()
             # CAMERA OPERATIONS
-            col.label(text="Camera:")
+            col.label(text="CAMERA:")
             col.operator("view3d.view_camera", text="Toggle Camera View (Numpad 0)")
             if context.scene.camera:
-                col.operator("view3d.camera_to_view_selected", text="Align Camera to View (Ctrl + Alt + Numpad 0)")
+                col.operator("view3d.camera_to_view", text="Align Camera to View (Ctrl + Alt + Numpad 0)")
                 row = col.row()
                 row.prop(context.space_data, "lock_camera", text="Lock Camera to View")
             else:
                 col.label(text="No active camera in scene")
+            
+            col.separator()
+            col.separator()
+            # VIEWPORT ENHANCEMENTS
+            col.label(text="ENHANCE VIEWPORT: (Solid Mode)")
+            col.operator("wm.context_toggle", text="Cavity - Edge shadows", icon='MOD_SOLIDIFY').data_path = "space_data.shading.show_cavity"
+            
+            
+            col.separator()
+            op = col.operator("wm.context_set_enum", text="STUDIO Shading", icon='MOD_SOLIDIFY')
+            op.data_path = "space_data.shading.light"
+            op.value = 'STUDIO'
+            col.separator()
+
+            #op = col.operator("wm.context_set_enum", text="MATCAP Shading", icon='MOD_SOLIDIFY')
+            #op.data_path = "space_data.shading.light"
+            #op.value = 'MATCAP'
+
+            # Custom operators for MATCAP presets that handle viewport switching
+            col.operator("cheatsheets.set_matcap_clay", text="MATCAP Clay - Matt", icon='MOD_SOLIDIFY')
+            col.operator("cheatsheets.set_matcap_reflective", text="MATCAP Reflective - Specular", icon='MOD_SOLIDIFY')
+            
+            
+            
             
             
             
             col.separator()
             col.separator()
             # QUICK NAVIGATION (High frequency)
-            col.label(text="Quick View:")
+            col.label(text="QUICK VIEW:")
             col.operator("view3d.view_all", text="Frame All Objects (Home)")
             col.operator("view3d.view_selected", text="Frame Selected (Numpad .)")
-            col.operator("view3d.snap_cursor_to_center", text="Reset View Focus (Shift + C)")
+            #col.operator("view3d.snap_cursor_to_center", text="Reset View Focus (Shift + C)")
+            
+            col.separator()
             col.operator("wm.context_toggle", text="Wireframe Overlay Toggle", icon='SHADING_WIRE').data_path = "space_data.overlay.show_wireframes"
             #col.operator("wm.context_toggle", text="X-Ray Mode Toggle (Edit mode)", icon='XRAY').data_path = "space_data.shading.show_xray"
             #row = col.row()
@@ -902,13 +1141,17 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             #row.operator("view3d.disable_xray", text="Disable X-Ray", icon='PANEL_CLOSE')
             col.operator("wm.context_toggle", text="X-Ray Mode Toggle (Edit mode)", icon='XRAY').data_path = "space_data.shading.show_xray"
             
-            
+            col.separator()
+            col.operator("wm.context_toggle", text="Show/Hide Grid", icon='GRID').data_path = "space_data.overlay.show_floor"
+            col.operator("wm.context_toggle", text="Show/Hide X Axis", icon='EMPTY_AXIS').data_path = "space_data.overlay.show_axis_x"
+            col.operator("wm.context_toggle", text="Show/Hide Y Axis", icon='EMPTY_AXIS').data_path = "space_data.overlay.show_axis_y"
+            col.operator("wm.context_toggle", text="Show/Hide Z Axis", icon='EMPTY_AXIS').data_path = "space_data.overlay.show_axis_z"
             
             
             col.separator()
             col.separator()
             # STANDARD VIEWS (For precision work)
-            col.label(text="Standard Views (Numpad):")
+            col.label(text="STANDARD VIEWS (Numpad):")
             row = col.row(align=True)
             row.operator("view3d.view_axis", text="Top (7)").type = 'TOP'
             row.operator("view3d.view_axis", text="Front (1)").type = 'FRONT'
@@ -924,19 +1167,26 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             
             col.separator()
             col.separator()
-            col.label(text="Viewport Background", icon='VIEW3D')
+            col.label(text="VIEWPORT BACKGROUND", icon='VIEW3D')
+
+            # Get the actual theme colors
+            theme = context.preferences.themes['Default']
+            theme_3d = theme.view_3d
+
             row = col.row()
             row.prop(context.scene.viewport_theme, "bg_type")
 
             if context.scene.viewport_theme.bg_type in {'SOLID', 'GRADIENT', 'LINEAR'}:
                 row = col.row()
-                row.prop(context.scene.viewport_theme, "bg_color_high")
+                # Show the actual theme color instead of scene property
+                row.prop(theme_3d.space.gradients, "high_gradient", text="Background Color")
+                
                 if context.scene.viewport_theme.bg_type in {'GRADIENT', 'LINEAR'}:
-                    row.prop(context.scene.viewport_theme, "bg_color_low")
+                    # Show the actual gradient color
+                    row.prop(theme_3d.space.gradients, "gradient", text="Gradient Color")
 
             row = col.row()
             row.operator("view3d.reset_viewport_background", text="Reset", icon='LOOP_BACK')
-            #if hasattr(bpy.ops.view3d, 'save_startup_settings'):
             row.operator("wm.save_userpref", text="Save", icon='FILE_TICK')
             col.separator()
             col.separator()
@@ -971,7 +1221,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                 col.separator()
             
             # CORE TRANSFORMS (work everywhere)
-            col.label(text="Basic Transforms:")
+            col.label(text="BASIC TRANSFORMS:")
             row = col.row()
             row.scale_y = 1.35
             row.operator("transform.translate", text="Move (G)")
@@ -986,26 +1236,32 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                 col.label(text="• Local axes: XX, YY, ZZ")
                 
             col.separator()
-            col.label(text="Proportional Editing:")
-            #col.operator("wm.context_toggle", text="Toggle Proportional Editing (O)", icon='PROP_ON').data_path = "tool_settings.use_proportional_edit_objects"
-            prop_edit = context.tool_settings.use_proportional_edit_objects
-            icon = 'PROP_ON' if prop_edit else 'PROP_OFF'
-            col.prop(context.tool_settings, "use_proportional_edit_objects", text="Toggle Proportional Editing (O)", icon=icon, toggle=True)
+            col.label(text="PROPORTIONAL EDITING:")
+            
+            # Determine current state and icon
+            if context.mode == 'OBJECT':
+                is_active = context.tool_settings.use_proportional_edit_objects
+            else:
+                is_active = context.tool_settings.use_proportional_edit
+            
+            icon = 'PROP_ON' if is_active else 'PROP_OFF'
+            col.operator("mesh.toggle_proportional_edit", text="Toggle Proportional Editing (O)", icon=icon)
             
             
             col.separator()  
             # ADVANCED HELPERS
-            col.label(text="Snapping:")
+            col.label(text="SNAPPING:")
             col.prop(context.tool_settings, "use_snap", text="Enable Snapping (SHIFT + TAB)") 
             # Smart Snaps section
+            
             col.separator()
-            col.label(text="Smart Snaps:")
+            col.label(text="SMART SNAPS:")
             col.operator("mesh.smart_snap", text="Smart Snap", icon='SNAP_VERTEX')
             col.label(text="• Recommended default snap settings:")
             col.separator()
             col.operator("mesh.smart_snap_vertex", text="Smart Snap to Vertex", icon='VERTEXSEL')
             col.operator("mesh.smart_snap_edge", text="Smart Snap to Edge Mid", icon='EDGESEL') 
-            col.operator("mesh.smart_snap_face", text="Smart Snap to Face Center", icon='FACESEL')
+            #col.operator("mesh.smart_snap_face", text="Smart Snap to Face", icon='FACESEL')
             col.separator()
             col.separator()
             
@@ -1204,22 +1460,6 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.operator("object.origin_set", text="Origin to Bounding Box Center").type = 'ORIGIN_CENTER_OF_VOLUME'
             #col.operator("object.origin_set", text="Origin to Bottom of Object").type = 'ORIGIN_GEOMETRY'
             col.operator("mesh.origin_to_bottom", text="Origin to Bottom of Object")
-            col.separator()
-            
-            col.label(text="Object to Face:")
-            if scene.show_help_object_origin:
-                col.label(text="Select your object first")
-                col.label(text="Shift + RMB to place your cursor")
-                col.label(text="Click one of the buttons to reposition your object")
-                col.separator()
-
-
-            col.operator("mesh.top_origin_to_cursor", text="Top Origin to 3D Cursor")
-            col.operator("mesh.bottom_origin_to_cursor", text="Bottom Origin to 3D Cursor")
-            col.operator("mesh.front_origin_to_cursor", text="Front Origin to 3D Cursor")
-            col.operator("mesh.back_origin_to_cursor", text="Back Origin to 3D Cursor")
-            col.operator("mesh.left_origin_to_cursor", text="Left Origin to 3D Cursor")
-            col.operator("mesh.right_origin_to_cursor", text="Right Origin to 3D Cursor")
             
  
             
@@ -1269,6 +1509,8 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             else:
                 status_row.label(text="No Objects Selected - Select Something First", icon='RESTRICT_SELECT_ON')
             
+            col.separator()
+            col.label(text="MODELLING SHAPES:")
             if scene.show_help_primitives:
                 col.label(text="Basic shapes to start modeling with:")
                 col.separator()
@@ -1277,30 +1519,86 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.operator("mesh.primitive_plane_add", text="Plane", icon='MESH_PLANE')
             if scene.show_help_primitives:
                 col.label(text="• Flat surface (good for floors, walls)")
-            
+                col.separator()
+                
             col.operator("mesh.primitive_cube_add", text="Cube", icon='MESH_CUBE')
             if scene.show_help_primitives:
                 col.label(text="• Basic box shape")
+                col.separator()
             
             col.operator("mesh.primitive_circle_add", text="Circle", icon='MESH_CIRCLE')
             if scene.show_help_primitives:
                 col.label(text="• Flat circle (good for starting complex shapes)")
+                col.separator()
             
-            col.operator("mesh.primitive_uv_sphere_add", text="Sphere", icon='MESH_UVSPHERE')
+            col.operator("mesh.primitive_uv_sphere_add", text="UV Sphere", icon='MESH_UVSPHERE')
             if scene.show_help_primitives:
-                col.label(text="• Perfect ball shape")
+                col.label(text="• Sphere made from quads")
+                col.label(text="• Organic for head, body, planets")
+                col.label(text="• Quad-based sphere (industry standard)")
+                col.separator()
+            
+            col.operator("mesh.primitive_ico_sphere_add", text="ICO Sphere", icon='MESH_ICOSPHERE')
+            if scene.show_help_primitives:
+                col.label(text="• Sphere made from triangles")
+                col.label(text="• Triangle-based sphere (avoid for modeling)")
+                col.separator()
             
             col.operator("mesh.primitive_cylinder_add", text="Cylinder", icon='MESH_CYLINDER')
             if scene.show_help_primitives:
                 col.label(text="• Tube shape (good for pillars, cans)")
+                col.separator()
             
             col.operator("mesh.primitive_cone_add", text="Cone", icon='MESH_CONE')
             if scene.show_help_primitives:
                 col.label(text="• Pointed cone shape")
+                col.separator()
             
             col.operator("mesh.primitive_torus_add", text="Torus", icon='MESH_TORUS')
             if scene.show_help_primitives:
                 col.label(text="• Donut shape")
+                col.separator()
+            
+            col.separator()
+            col.label(text="TERRAIN:")
+            col.operator("mesh.primitive_grid_add", text="Grid", icon='MESH_GRID')
+            if scene.show_help_primitives:
+                col.label(text="• Flat Grid for quick terrains")
+                col.separator()
+                
+            col.separator()
+            col.label(text="PLAYER PLACEHOLDER:")            
+            op = col.operator("object.metaball_add", text="Player Capsule", icon='MESH_CAPSULE')
+            op.type = 'CAPSULE'
+            if scene.show_help_primitives:
+                col.label(text="• Capsule to represent a character during prototyping")    
+                col.separator()
+            
+            col.separator()
+            col.label(text="LIGHTS:")
+            op = col.operator("object.light_add", text="Sun Light", icon='LIGHT_SUN')
+            op.type = 'SUN'
+            if scene.show_help_primitives:
+                col.label(text="• Sun Light")
+                col.separator()
+            
+            op = col.operator("object.light_add", text="Point Light", icon='LIGHT_POINT')
+            op.type = 'POINT'
+            if scene.show_help_primitives:
+                col.label(text="• Point Light")
+                col.separator()
+            
+            op = col.operator("object.light_add", text="Spot Light", icon='LIGHT_SPOT')
+            op.type = 'SPOT'
+            if scene.show_help_primitives:
+                col.label(text="• Spot Light - Torch or beam of light")
+                col.separator()
+            
+            op = col.operator("object.light_add", text="Area Light", icon='LIGHT_AREA')
+            op.type = 'AREA'
+            if scene.show_help_primitives:
+                col.label(text="• Flourescent Light")
+                col.separator()
             
             if scene.show_help_primitives:
                 col.separator()
@@ -1339,6 +1637,12 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             if current_mode == 'EDIT':
                 sub_row.alert = True
             sub_row.operator("object.switch_to_edit_mode", text="Edit Mode", icon='EDITMODE_HLT')
+            
+            col.separator()
+            col.operator("transform.translate", text="Move (G)")
+            col.operator("transform.rotate", text="Rotate (R)")
+            col.operator("transform.resize", text="Scale (S)")
+            col.label(text="• Move selected along surface (gg)")
             
             col.separator()
              # Selection status button
@@ -1410,12 +1714,11 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             
             
             
-            if scene.show_help_general:
+            if scene.show_help_object_mode:
                 col.label(text="• Reset Rotation: Straightens object")
                 col.label(text="• Reset Scale: Returns to original size")
                 col.label(text="• Undo Transforms: Removes current rotation/scale")
             
-       
             col.separator()
             col.separator()
             col.label(text="VIEWING CONTROLS:")
@@ -1456,6 +1759,32 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             
             col.separator()
             col.separator()
+            col.label(text="SELECT AND MOVE:")
+            col.label(text="Object to World, 3D Cursor:")
+            if scene.show_help_general:
+                col.label(text="Select your object first")
+                col.label(text="Shift + RMB to place your cursor")
+                col.label(text="Click one of the buttons to reposition your object")
+                col.separator()
+
+            row = col.row()
+            row.scale_y = 1.2            
+            row.operator("object.location_clear", text="Object to World Origin (Alt + G)").clear_delta = False
+            col.separator()
+            col.operator("mesh.top_origin_to_cursor", text="Top of Object to 3D Cursor")
+            col.operator("mesh.bottom_origin_to_cursor", text="Bottom of Object to 3D Cursor")
+            col.operator("mesh.front_origin_to_cursor", text="Front of Object to 3D Cursor")
+            col.operator("mesh.back_origin_to_cursor", text="Back of Object to 3D Cursor")
+            col.operator("mesh.left_origin_to_cursor", text="Left of Object to 3D Cursor")
+            col.operator("mesh.right_origin_to_cursor", text="Right of Object to 3D Cursor")
+            col.separator()
+            col.operator("mesh.drag_along_floor", text="Drag Object along Floor")
+            
+       
+            
+            
+            col.separator()
+            col.separator()
             col.label(text="OBJECT TOOLS:")             
         
             col.separator()
@@ -1464,15 +1793,18 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.operator("object.duplicate_move", text="Duplicate (Shift + D)")
             if scene.show_help_object_mode:
                 col.label(text="• Duplicate: Creates copy you can move")
-            col.operator("object.make_single_user", text="Make Unique [single user] (U)")
-            if scene.show_help_object_mode:
-                col.label(text="• Make unique as its own object")
-                col.label(text="• Keep seperate mesh and textures")
             col.operator("object.delete", text="Delete (X or Delete)")
             if scene.show_help_object_mode:
                 col.label(text="• Delete: Removes object completely")
                 col.separator()
-            
+                
+            col.separator()    
+            col.operator("object.make_single_user", text="Make Unique [single user] (U)")
+            if scene.show_help_object_mode:
+                col.label(text="• Make unique as its own object")
+                col.label(text="• Keep seperate mesh and textures")
+                
+                
             col.separator()
             col.separator()
             # COMBINING OBJECTS
@@ -1489,7 +1821,6 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             # MODIFIERS
             col.label(text="Modifier: Stack (Properties > Green spanner)")
 
-            # Bevel Modifier
             op = col.operator("object.modifier_add", text="Bevel Modifier")
             op.type = 'BEVEL'
             if scene.show_help_edit_mode:    
@@ -1597,14 +1928,65 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                 sub_row.alert = True
             sub_row.operator("object.switch_to_edit_mode", text="Edit Mode", icon='EDITMODE_HLT')
             
+            ###
+            
+            # Get current selection mode for edit mode feedback
+            #select_mode = None
+            #if current_mode == 'EDIT' and context.object and context.object.type == 'MESH':
+                #select_mode = context.tool_settings.mesh_select_mode
+            
+            # G V - Move / Vertex
+            row = col.row()
+            row.scale_y = 1.0
+            
+            # Move button - always visible
+            sub_row = row.row()
+            sub_row.operator("transform.translate", text="Move (G)")
+            
+            # Vertex button - always visible, grays out automatically in Object Mode
+            sub_row = row.row()
+            #if select_mode and select_mode[0]:  # Vertex mode active
+                #sub_row.alert = True
+            sub_row.operator("mesh.select_mode", text="Vertex (1)", icon='VERTEXSEL').type = 'VERT'
+            
+            # R E - Rotate / Edge
+            row = col.row()
+            row.scale_y = 1.0
+            
+            # Rotate button - always visible
+            sub_row = row.row()
+            sub_row.operator("transform.rotate", text="Rotate (R)")
+            
+            # Edge button - always visible, grays out automatically in Object Mode
+            sub_row = row.row()
+            #if select_mode and select_mode[1]:  # Edge mode active
+                #sub_row.alert = True
+            sub_row.operator("mesh.select_mode", text="Edge (2)", icon='EDGESEL').type = 'EDGE'
+            
+            # S F - Scale / Face
+            row = col.row()
+            row.scale_y = 1.0
+            
+            # Scale button - always visible
+            sub_row = row.row()
+            sub_row.operator("transform.resize", text="Scale (S)")
+            
+            # Face button - always visible, grays out automatically in Object Mode
+            sub_row = row.row()
+            #if select_mode and select_mode[2]:  # Face mode active
+                #sub_row.alert = True
+            sub_row.operator("mesh.select_mode", text="Face (3)", icon='FACESEL').type = 'FACE'
+            
+            ###
+            
             col.separator()
              # Selection status button
-            status_row = col.row()
-            if context.selected_objects:
-                status_row.alert = True
-                status_row.label(text="Objects Selected - Tools Active", icon='OBJECT_DATAMODE')
-            else:
-                status_row.label(text="No Objects Selected - Select Something First", icon='RESTRICT_SELECT_ON')
+            #status_row = col.row()
+            #if context.selected_objects:
+                #status_row.alert = True
+                #status_row.label(text="Objects Selected - Tools Active", icon='OBJECT_DATAMODE')
+            #else:
+                #status_row.label(text="No Objects Selected - Select Something First", icon='RESTRICT_SELECT_ON')
                 
                 
             # Selection status for Edit Mode
@@ -1694,16 +2076,12 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.separator()
             col.separator()
             # Correct coplanar selection
-            col.label(text="Select Similar - Shift + G")
-            #op = col.operator("mesh.select_similar", text="Select Similar - Coplanar (Shift + G)")
+            col.label(text="Select Similar: (Shift + G)")
+            #op = col.operator("mesh.select_similar", text="Select Similar Faces - Coplanar (Shift + G)")
             #op.type = 'COPLANAR'
             #if scene.show_help_edit_mode:    
             col.label(text="• Sub menu changes depending on vertice, edge or face selected")
-            
-            
-            
-            
-            
+
             col.separator()
             col.separator()
             col.label(text="EDITING TOOLS:")
@@ -1731,18 +2109,18 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.separator()
             col.separator()
             # DISSOLVE
-            col.label(text="Dissolve:")
-            col.operator("mesh.dissolve_verts", text="Dissolve Vertices (X)")
+            col.label(text="Dissolve: (X)")
+            col.operator("mesh.dissolve_verts", text="Dissolve Vertices")
             if scene.show_help_edit_mode:    
                 col.label(text="• Dissolve Vertices = Remove vertices, keep connections")
             
-            col.operator("mesh.dissolve_edges", text="Dissolve Edges (X)")
+            col.operator("mesh.dissolve_edges", text="Dissolve Edges")
             if scene.show_help_edit_mode:    
                 col.label(text="• Dissolve Edges = Remove edges, keep faces")
-            col.operator("mesh.dissolve_faces", text="Dissolve Faces (X)")
+            col.operator("mesh.dissolve_faces", text="Dissolve Faces")
             if scene.show_help_edit_mode:    
                 col.label(text="• Dissolve Faces = Remove faces, keep edges")
-            col.operator("mesh.dissolve_limited", text="Limited Dissolve (X)")
+            col.operator("mesh.dissolve_limited", text="Limited Dissolve")
             if scene.show_help_edit_mode:    
                 col.label(text="• Limited Dissolve = Remove unnecessary edges/faces")
             
@@ -1768,15 +2146,35 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                 col.operator("mesh.loopcut_slide", text="Loop Cut (Ctrl + R)")
                 if scene.show_help_edit_mode:    
                     col.label(text="• Loop Cut = Add edge ring around object")
+            
+            col.separator()
             col.operator("mesh.mark_seam", text="Mark Seam (Ctrl + E)")
             if scene.show_help_edit_mode:    
                 col.label(text="• Mark Seam = Mark edges for UV unwrapping")
+            op = col.operator("mesh.mark_seam", text="Unmark Seam")
+            op.clear = True
+            if scene.show_help_edit_mode:    
+                col.label(text="• Clear Seam = Unmark edges for UV unwrapping")   
+                
+     
+
+            col.separator()    
             col.operator("mesh.mark_sharp", text="Mark Sharp (Ctrl + E)")
             if scene.show_help_edit_mode:    
                 col.label(text="• Mark Sharp = Mark edges for hard shading")
+            
+            col.operator("mesh.mark_sharp", text="Clear Sharp (Ctrl + E)")
+            op.clear = True
+            if scene.show_help_edit_mode:    
+                col.label(text="• Clear Sharp = Clear edges for hard shading")       
+            
+                
+            col.separator()    
             col.operator("mesh.rip_edge", text="Rip Edge (Alt + V)")
             if scene.show_help_edit_mode:    
                 col.label(text="• Rip Edge = Split edge into two")
+            
+            col.separator()
             col.operator("mesh.subdivide", text="Subdivide Edges (Ctrl + E)(RMB > S)")
             if scene.show_help_edit_mode:    
                 col.label(text="• Subdivide = Add cuts to increase edge density")
@@ -1789,17 +2187,17 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.separator()
             col.separator()
             # EXTRUDE
-            col.label(text="Extrude:")
-            col.operator("mesh.extrude_region_move", text="Extrude (E)")
+            col.label(text="Extrude: (E)")
+            col.operator("mesh.extrude_region_move", text="Extrude")
             if scene.show_help_edit_mode:
                 col.label(text="• Extrude = Pull out new geometry")
-            col.operator("mesh.extrude_vertices_move", text="Extrude Vertices (E)")
+            col.operator("mesh.extrude_vertices_move", text="Extrude Vertices")
             if scene.show_help_edit_mode:    
                 col.label(text="• Extrude Vertices = Pull out new vertices")
-            col.operator("mesh.extrude_edges_move", text="Extrude Edges (E)")
+            col.operator("mesh.extrude_edges_move", text="Extrude Edges")
             if scene.show_help_edit_mode:    
                 col.label(text="• Extrude Edges = Pull out new edges")
-            col.operator("mesh.extrude_faces_move", text="Extrude Faces (E)")
+            col.operator("mesh.extrude_faces_move", text="Extrude Faces")
             if scene.show_help_edit_mode:    
                 col.label(text="• Extrude Faces = Pull out new faces")
             
@@ -2219,6 +2617,7 @@ class SHORTCUTS_OT_EditMode(bpy.types.Operator):
         return {'FINISHED'}
 
 
+
 classes = (
     SHORTCUTS_PT_Panel,
     SHORTCUTS_OT_SetUnits,
@@ -2232,6 +2631,7 @@ classes = (
     MESH_OT_bottom_origin_to_cursor, 
     MESH_OT_left_origin_to_cursor,
     MESH_OT_right_origin_to_cursor,
+    MESH_OT_drag_along_floor,
     OBJECT_OT_reset_transforms,
     MESH_OT_smart_snap_vertex,
     MESH_OT_smart_snap_edge,
@@ -2240,6 +2640,9 @@ classes = (
     VIEW3D_OT_enable_xray,
     VIEW3D_OT_disable_xray,
     VIEW3D_OT_reset_viewport_background,
+    MESH_OT_toggle_proportional_edit,
+    SetMatcapClay,
+    SetMatcapReflective,
 )
 
 
