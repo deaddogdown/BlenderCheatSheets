@@ -1,4 +1,6 @@
 # Blender CheatSheets
+https://github.com/deaddogdown/BlenderCheatSheets
+https://projects.blender.org/DeadDogDown/Blender-CheatSheets
 
 A simple and intuitive toolbar designed to help **Blender Creators of all skill levels** access common tools and shortcuts quickly and easily.
 
