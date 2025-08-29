@@ -746,10 +746,12 @@ class SHORTCUTS_OT_SetUnits(bpy.types.Operator):
 
 class OBJECT_OT_reset_transforms(bpy.types.Operator):
     bl_idname = "object.reset_transforms"
-    bl_label = "Reset Rotation & Scale"
-    bl_description = "Clear rotation and scale of selected objects"
+    bl_label = "Reset Location, Rotation & Scale"
+    bl_description = "Clear location, rotation and scale of selected objects"
 
     def execute(self, context):
+        # Clear rotation
+        bpy.ops.object.location_clear(clear_delta=False)
         # Clear rotation
         bpy.ops.object.rotation_clear(clear_delta=False)
         # Clear scale
@@ -850,10 +852,12 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
         
-        layout.label(text="MODE SWITCH: (TAB)")
-        # Mode switch buttons at the top with visual feedback
-        row = layout.row()
+        # Create sticky header box for essential tools
+        header_box = layout.box()
         
+        # MODE SWITCHER
+        header_box.label(text="MODE SWITCH: (TAB)")
+        row = header_box.row()
         row.scale_y = 1.5
         obj = context.object
         current_mode = obj.mode if obj else 'OBJECT'
@@ -870,54 +874,46 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             sub_row.alert = True
         sub_row.operator("object.switch_to_edit_mode", text="Edit Mode", icon='EDITMODE_HLT')
         
+        # ESSENTIAL TRANSFORMS & SELECTION
+        #header_box.separator()
+        
         # Get current selection mode for edit mode feedback
         select_mode = None
         if current_mode == 'EDIT' and context.object and context.object.type == 'MESH':
             select_mode = context.tool_settings.mesh_select_mode
         
         # G V - Move / Vertex
-        row = layout.row()
+        row = header_box.row()
         row.scale_y = 1.0
         
-        # Move button - always visible
         sub_row = row.row()
         sub_row.operator("transform.translate", text="Move (G)")
         
-        # Vertex button - always visible, grays out automatically in Object Mode
         sub_row = row.row()
-        #if select_mode and select_mode[0]:  # Vertex mode active
-            #sub_row.alert = True
         sub_row.operator("mesh.select_mode", text="Vertex (1)", icon='VERTEXSEL').type = 'VERT'
         
         # R E - Rotate / Edge
-        row = layout.row()
+        row = header_box.row()
         row.scale_y = 1.0
         
-        # Rotate button - always visible
         sub_row = row.row()
         sub_row.operator("transform.rotate", text="Rotate (R)")
         
-        # Edge button - always visible, grays out automatically in Object Mode
         sub_row = row.row()
-        #if select_mode and select_mode[1]:  # Edge mode active
-            #sub_row.alert = True
         sub_row.operator("mesh.select_mode", text="Edge (2)", icon='EDGESEL').type = 'EDGE'
         
         # S F - Scale / Face
-        row = layout.row()
+        row = header_box.row()
         row.scale_y = 1.0
         
-        # Scale button - always visible
         sub_row = row.row()
         sub_row.operator("transform.resize", text="Scale (S)")
         
-        # Face button - always visible, grays out automatically in Object Mode
         sub_row = row.row()
-        #if select_mode and select_mode[2]:  # Face mode active
-            #sub_row.alert = True
         sub_row.operator("mesh.select_mode", text="Face (3)", icon='FACESEL').type = 'FACE'
         
-        
+        # Visual separation before scrollable content
+        header_box.separator()
    
         
         # 🧩 General
@@ -1666,15 +1662,26 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             
             row = col.row()
             row.scale_y = 1.35
-            row.operator("object.transform_apply", text="Apply Rotation and Scale (Ctrl + A)")
+            op = row.operator("object.transform_apply", text="Apply Location, Rotation and Scale (Ctrl + A)")
+            op.location = True
+            op.rotation = True
+            op.scale = True
+
             if scene.show_help_general:
-                col.label(text="• Apply Transforms: Makes current rotation/scale permanent")
-                col.label(text="• Used after Rotation and Scaling")
+                col.label(text="• Apply Transforms: Makes current location/rotation/scale permanent")
+                col.label(text="• Used after Translation, Rotation and Scaling")
             
             col.separator()            
             # New section: Apply Scale & Apply Rotation
             row = col.row()  # Create a new row for the apply buttons
 
+            # Apply Rotation only  
+            sub_row = row.row()
+            op = sub_row.operator("object.transform_apply", text="Apply Location")
+            op.location = True
+            op.rotation = False
+            op.scale = False
+            
             # Apply Rotation only  
             sub_row = row.row()
             op = sub_row.operator("object.transform_apply", text="Apply Rotation")
@@ -1698,12 +1705,16 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             # Combined Reset Button
             row = col.row()
             row.scale_y = 1.35
-            row.operator("object.reset_transforms", text="Reset Rotation & Scale")
+            row.operator("object.reset_transforms", text="Reset Location, Rotation & Scale")
             
             col.separator()
             # New section: Reset Rotation & Reset Scale
             row = col.row()  # Create a new row for the reset buttons
 
+            # Reset Location
+            sub_row = row.row()
+            sub_row.operator("object.location_clear", text="Reset Location (Alt + G)").clear_delta = False
+            
             # Reset Rotation
             sub_row = row.row()
             sub_row.operator("object.rotation_clear", text="Reset Rotation (Alt + R)").clear_delta = False
@@ -1748,9 +1759,9 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                 col.separator()
                 
                 
-            col.operator("object.select_all", text="Select All/None (A)")
-            if scene.show_help_edit_mode:    
-                col.label(text="• Select All/None = Toggle all selection")
+            #col.operator("object.select_all", text="Select All/None (A)")
+            #if scene.show_help_edit_mode:    
+                #col.label(text="• Select All/None = Toggle all selection")
                 
             if hasattr(bpy.ops.object, 'select_all'):
                 col.operator("object.select_all", text="Select Opposite (Ctrl + I)").action = 'INVERT'  
@@ -1849,29 +1860,33 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             op.type = 'SOLIDIFY'
             if scene.show_help_edit_mode:    
                 col.label(text="• Add Solidify Modifier")
-            
+
             col.separator()
             col.separator()
             col.label(text="Sub-Division Modifier: Level 1, 2, 3 ")
-            
+
+            # Level 1
             op = col.operator("object.subdivision_set", text="Sub Divide Mesh Level 1 (Ctrl + 1)")
             op.level = 1
             op.relative = False
             if scene.show_help_edit_mode:    
                 col.label(text="• Create Modifier = Level 1")
 
-            col.operator("object.subdivision_set", text="Sub Divide Mesh Level 2 (Ctrl + 2)")
+            # Level 2 - YOU NEED TO STORE THE OPERATOR RESULT HERE TOO
+            op = col.operator("object.subdivision_set", text="Sub Divide Mesh Level 2 (Ctrl + 2)")
             op.level = 2
             op.relative = False
             if scene.show_help_edit_mode:    
                 col.label(text="• Create Modifier = Level 2")
-            
-            col.operator("object.subdivision_set", text="Sub Divide Mesh Level 3 (Ctrl + 3)")
+
+            # Level 3 - AND HERE
+            op = col.operator("object.subdivision_set", text="Sub Divide Mesh Level 3 (Ctrl + 3)")
             op.level = 3
             op.relative = False
             if scene.show_help_edit_mode:    
                 col.label(text="• Create Modifier = Level 3")
             
+            col.separator()
             col.operator("object.make_links_data", text="Copy Modifiers - from > to (Ctrl + L)").type='MODIFIERS'
             if scene.show_help_edit_mode:    
                 col.label(text="• Copy Modifiers = from (1st selection) to (shift click 2nd selection")

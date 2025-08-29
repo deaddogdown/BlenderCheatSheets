@@ -2,6 +2,9 @@
 import bpy
 from mathutils import Vector
 
+
+
+
 def set_origin_to_bottom():
     obj = bpy.context.active_object
     if obj and obj.type == 'MESH':
@@ -53,6 +56,8 @@ class MESH_OT_origin_to_global_zero(bpy.types.Operator):
     def execute(self, context):
         set_origin_to_global_zero()
         return {'FINISHED'}
+
+
 
 def register():
     bpy.utils.register_class(MESH_OT_origin_to_bottom)

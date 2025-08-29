@@ -11,16 +11,20 @@ bl_info = {
 if "bpy" in locals():
     import importlib
     importlib.reload(blenderCheatSheets)
+    importlib.reload(blenderCheatSheetsHelpers)  # Add this line
 else:
     from . import blenderCheatSheets
+    from . import blenderCheatSheetsHelpers      # Add this line
 
 import bpy
 
 def register():
     blenderCheatSheets.register()
+    blenderCheatSheetsHelpers.register()         # Add this line
 
 def unregister():
     blenderCheatSheets.unregister()
+    blenderCheatSheetsHelpers.unregister()       # Add this line
 
 if __name__ == "__main__":
     register()
