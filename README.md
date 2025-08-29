@@ -9,7 +9,7 @@ A simple and intuitive toolbar designed to help **Blender Creators of all skill 
 - Provides a comprehensive cheatsheet panel inside Blenders 3d view
 - You choose whether you want to use Buttons or Shortcuts
 - Lists common keyboard, mouse, and numpad shortcuts
-- Provides explicit button alternatives for all common commands
+- Provides explicit button alternatives for many common commands
 - Clean friendly UI panel inside Blender for users of any skill level, especially newbies and intermediates
 - Consistency in 3d Language concepts
 - Designed for clarity and accessibility
