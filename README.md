@@ -3,7 +3,7 @@
 - https://projects.blender.org/deaddogdown/BlenderCheatSheets
 - https://www.youtube.com/@DeadDogDown.GameStudio
 
-A simple and intuitive toolbar designed to help **Blender Creators of all skill levels** access common tools and shortcuts quickly and easily.
+A simple and intuitive Cheatsheets toolbar designed to help **Blender Creators of all skill levels** access common tools and shortcuts quickly and easily.
 
 ## 🧰 Features
 
