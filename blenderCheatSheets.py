@@ -1136,7 +1136,8 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             #row.operator("view3d.enable_xray", text="Enable X-Ray", icon='XRAY')
             #row.operator("view3d.disable_xray", text="Disable X-Ray", icon='PANEL_CLOSE')
             col.operator("wm.context_toggle", text="X-Ray Mode Toggle (Edit mode)", icon='XRAY').data_path = "space_data.shading.show_xray"
-            
+
+
             col.separator()
             col.operator("wm.context_toggle", text="Show/Hide Grid", icon='GRID').data_path = "space_data.overlay.show_floor"
             col.operator("wm.context_toggle", text="Show/Hide X Axis", icon='EMPTY_AXIS').data_path = "space_data.overlay.show_axis_x"
@@ -2052,6 +2053,24 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.label(text="Mesh Visibility:")
             col.operator("mesh.hide", text="Hide Selected (H)")
             col.operator("mesh.reveal", text="Reveal Hidden (Alt + H)")
+            
+            
+            
+            
+            col.separator()
+            col.separator()
+            col.label(text="Show Normals:")
+            col.operator("wm.context_toggle", text="Show Face Normals", icon='NORMALS_FACE').data_path = "space_data.overlay.show_face_normals"
+            col.operator("wm.context_toggle", text="Show Vertex Normals", icon='NORMALS_VERTEX').data_path = "space_data.overlay.show_vertex_normals"
+            col.operator("wm.context_toggle", text="Show Split Normals", icon='NORMALS_VERTEX_FACE').data_path = "space_data.overlay.show_split_normals"
+            
+            col.separator()
+            col.separator()
+            col.label(text="Flip Normals:")
+            op = col.operator("mesh.normals_make_consistent", text="Normals Face Outward", icon='NORMALS_FACE')
+            op.inside = False
+            op = col.operator("mesh.normals_make_consistent", text="Normals Face Inward", icon='NORMALS_FACE')
+            op.inside = True
             
             col.separator()
             col.separator()
