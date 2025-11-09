@@ -11,7 +11,7 @@ CheatSheets inside Blender like you never seen before.
 - [Blender 4.5 LTS](https://www.blender.org/download/releases/4-5/ )
 
 This add-on is designed to work with **Blender LTS (Long Term Support)** versions, ensuring stability and long-term usability.
-It will probably work on your version of Blender that is a non-LTS, so give it a try.
+It WILL probably work on your version of Blender that is a non-LTS, so give it a try.
 
 - https://github.com/deaddogdown/BlenderCheatSheets
 - https://projects.blender.org/deaddogdown/BlenderCheatSheets
