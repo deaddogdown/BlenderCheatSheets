@@ -21,6 +21,7 @@ A simple and intuitive Cheatsheets toolbar designed to help **Blender Creators o
 
 ## 🧰 Features
 
+- Reduce Cognitive Load and Brain drain
 - Provides a comprehensive cheatsheet panel inside Blenders 3d view
 - You choose whether you want to use Buttons or Shortcuts
 - Lists common keyboard, mouse, and numpad shortcuts
