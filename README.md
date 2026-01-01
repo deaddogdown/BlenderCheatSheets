@@ -2,7 +2,7 @@
 
 CheatSheets inside Blender like you never seen before.
 
-Watch out tutorials on youtube: https://www.youtube.com/@DeadDogDown.GameStudio
+Watch our tutorials on youtube: https://www.youtube.com/@DeadDogDown.GameStudio
 
 ## 🖥️ Compatibility
 
