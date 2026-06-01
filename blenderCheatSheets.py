@@ -55,12 +55,10 @@ def update_background_color(self, context):
             theme_3d = theme.view_3d
             
             if self.bg_type == 'SOLID':
+                # Set BOTH to the same color for solid background
                 theme_3d.space.gradients.high_gradient = self.bg_color_high
-                theme_3d.space.gradients.gradient = self.bg_color_high
-            elif self.bg_type == 'GRADIENT':
-                theme_3d.space.gradients.high_gradient = self.bg_color_high
-                theme_3d.space.gradients.gradient = self.bg_color_low
-            elif self.bg_type == 'LINEAR':
+                theme_3d.space.gradients.gradient = self.bg_color_high  # Same color!
+            elif self.bg_type == 'GRADIENT':  # Removed LINEAR
                 theme_3d.space.gradients.high_gradient = self.bg_color_high
                 theme_3d.space.gradients.gradient = self.bg_color_low
             elif self.bg_type == 'WORLD':
@@ -86,7 +84,6 @@ class ViewportThemeSettings(bpy.types.PropertyGroup):
         items=[
             ('SOLID', 'Solid', 'Solid background color'),
             ('GRADIENT', 'Gradient', 'Gradient background'),
-            ('LINEAR', 'Linear', 'Linear gradient background'),
             ('WORLD', 'World', 'Use world background'),
             ('VIEWPORT', 'Viewport', 'Use viewport background')
         ],
@@ -1165,23 +1162,22 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.separator()
             col.separator()
             col.label(text="VIEWPORT BACKGROUND", icon='VIEW3D')
-
             # Get the actual theme colors
             theme = context.preferences.themes['Default']
             theme_3d = theme.view_3d
-
             row = col.row()
             row.prop(context.scene.viewport_theme, "bg_type")
-
-            if context.scene.viewport_theme.bg_type in {'SOLID', 'GRADIENT', 'LINEAR'}:
+            
+            if context.scene.viewport_theme.bg_type in {'SOLID', 'GRADIENT'}:
                 row = col.row()
-                # Show the actual theme color instead of scene property
-                row.prop(theme_3d.space.gradients, "high_gradient", text="Background Color")
+                # Show OUR property from viewport_theme PropertyGroup
+                row.prop(context.scene.viewport_theme, "bg_color_high", text="Background Color")
                 
-                if context.scene.viewport_theme.bg_type in {'GRADIENT', 'LINEAR'}:
-                    # Show the actual gradient color
-                    row.prop(theme_3d.space.gradients, "gradient", text="Gradient Color")
-
+                if context.scene.viewport_theme.bg_type == 'GRADIENT':
+                    row = col.row()
+                    # Show OUR low color property
+                    row.prop(context.scene.viewport_theme, "bg_color_low", text="Gradient Color")
+                    
             row = col.row()
             row.operator("view3d.reset_viewport_background", text="Reset", icon='LOOP_BACK')
             row.operator("wm.save_userpref", text="Save", icon='FILE_TICK')
@@ -2253,7 +2249,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                 col.label(text="• Fill = Fill holes with new faces")
             col.operator("mesh.fill_grid", text="Fill with Grid (Ctrl + F)")
             if scene.show_help_edit_mode:    
-                col.label(text="• Fill Grid = Fill empty area with quad grid")
+                col.operator("mesh.edge_face_add", text="Fill Faces/Holes (F)")
             
             col.separator()
             col.separator()
