@@ -1,7 +1,7 @@
 bl_info = {
     "name": "CheatSheets",
     "author": "Dead Dog Down - Game Studio",
-    "version": (1, 0, 1),
+    "version": (1, 0, 2),
     "blender": (5, 0, 0),
     "location": "3D View > N-Panel > CheatSheets",
     "description": "Quick access to commonly used Blender shortcuts in collapsible sections.",
