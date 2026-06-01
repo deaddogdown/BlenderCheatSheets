@@ -2,7 +2,7 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatVectorProperty, PointerProperty
 from mathutils import Matrix, Vector
 from bpy.app.handlers import persistent
-import bgl, blf, gpu
+import blf, gpu
 from gpu_extras.batch import batch_for_shader
 import bpy_extras as view3d_utils
 from bpy_extras.view3d_utils import region_2d_to_origin_3d, region_2d_to_vector_3d
@@ -122,7 +122,7 @@ class SetMatcapClay(bpy.types.Operator):
             # Set lighting to MATCAP
             space.shading.light = 'MATCAP'
             # Set the specific MATCAP
-            space.shading.studio_light = 'basic_2.exr'
+            space.shading.studio_light = 'clay_studio.exr'
         return {'FINISHED'}
 
 class SetMatcapReflective(bpy.types.Operator):
@@ -2193,8 +2193,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             if scene.show_help_edit_mode:    
                 col.label(text="• Mark Sharp = Mark edges for hard shading")
             
-            col.operator("mesh.mark_sharp", text="Clear Sharp (Ctrl + E)")
-            op.clear = True
+            col.operator("mesh.mark_sharp", text="Clear Sharp (Ctrl + E)").clear = True
             if scene.show_help_edit_mode:    
                 col.label(text="• Clear Sharp = Clear edges for hard shading")       
             
