@@ -8,9 +8,9 @@ Watch our tutorials on youtube: https://www.youtube.com/@DeadDogDown.GameStudio
 
 ✅ **Currently supports:**
 
-- [Blender 3.6 LTS](https://www.blender.org/download/releases/3-6/ )  
-- [Blender 4.2 LTS](https://www.blender.org/download/releases/4-2/ )
-- [Blender 4.5 LTS](https://www.blender.org/download/releases/4-5/ )
+- [Blender 5.0 LTS](https://www.blender.org/download/releases/5-0/ )  
+- [Blender 4.5 LTS+](https://www.blender.org/download/releases/4-5/ )
+- [Blender 3.6 LTS+](https://www.blender.org/download/releases/3-6/ )
 
 This add-on is designed to work with **Blender LTS (Long Term Support)** versions, ensuring stability and long-term usability.
 It WILL probably work on your version of Blender that is a non-LTS, so give it a try.
