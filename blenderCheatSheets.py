@@ -1884,7 +1884,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
                 col.label(text="• Create Modifier = Level 3")
             
             col.separator()
-            col.operator("object.make_links_data", text="Copy Modifiers - from > to (Ctrl + L)").type='MODIFIERS'
+            col.operator("object.make_links_data", text="Copy Modifiers - to/from > to (Ctrl + L)").type='MODIFIERS'
             if scene.show_help_edit_mode:    
                 col.label(text="• Copy Modifiers = from (1st selection) to (shift click 2nd selection")
             
@@ -2147,7 +2147,7 @@ class SHORTCUTS_PT_Panel(bpy.types.Panel):
             col.operator("mesh.dissolve_edges", text="Dissolve Edges")
             if scene.show_help_edit_mode:    
                 col.label(text="• Dissolve Edges = Remove edges, keep faces")
-            col.operator("mesh.dissolve_faces", text="Dissolve Faces")
+            col.operator("mesh.delete", text="Dissolve Faces").type = 'FACE'
             if scene.show_help_edit_mode:    
                 col.label(text="• Dissolve Faces = Remove faces, keep edges")
             col.operator("mesh.dissolve_limited", text="Limited Dissolve")
